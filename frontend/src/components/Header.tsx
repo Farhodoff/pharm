@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Pill, Search as SearchIcon, Moon, Sun, Menu, X, LogIn } from 'lucide-react';
+import { Pill, Search as SearchIcon, Moon, Sun, Menu, X } from 'lucide-react';
 import { useSearchStore } from '../store/useSearchStore';
 
 export default function Header() {
@@ -70,20 +70,13 @@ export default function Header() {
 
         {/* Actions */}
         <div className="hidden md:flex items-center space-x-4">
-          <button 
+          <button
             onClick={() => setIsDarkMode(!isDarkMode)}
             className="p-2 rounded-full text-slate-500 hover:bg-slate-100 transition-colors"
             aria-label="Toggle Dark Mode"
           >
             {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
           </button>
-          <Link
-            to="/admin/login"
-            className="flex items-center space-x-2 text-blue-600 border border-blue-600 px-4 py-2 rounded-full hover:bg-blue-50 transition-colors font-medium"
-          >
-            <LogIn size={18} />
-            <span>Admin</span>
-          </Link>
         </div>
 
         {/* Mobile Menu Button */}
@@ -120,21 +113,14 @@ export default function Header() {
               </Link>
             ))}
           </nav>
-          <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
-             <button 
+          <div className="pt-4 border-t border-slate-100">
+            <button
               onClick={() => setIsDarkMode(!isDarkMode)}
               className="flex items-center space-x-2 text-slate-600"
             >
               {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
               <span>Tungi rejim</span>
             </button>
-            <Link
-              to="/admin/login"
-              className="flex items-center space-x-2 text-blue-600 font-medium"
-            >
-              <LogIn size={18} />
-              <span>Admin kirish</span>
-            </Link>
           </div>
         </div>
       )}

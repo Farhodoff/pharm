@@ -9,9 +9,9 @@ export const getMedicines = async (req: Request, res: Response) => {
 
     if (search) {
       filter.OR = [
-        { name: { contains: String(search), mode: 'insensitive' } },
-        { internationalName: { contains: String(search), mode: 'insensitive' } },
-        { activeSubstance: { contains: String(search), mode: 'insensitive' } },
+        { name: { contains: String(search) } },
+        { internationalName: { contains: String(search) } },
+        { activeSubstance: { contains: String(search) } },
       ];
     }
     
