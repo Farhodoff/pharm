@@ -1,0 +1,113 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Admin {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  password  String
+  createdAt DateTime @default(now())
+}
+
+model Category {
+  id        Int        @id @default(autoincrement())
+  name      String     @unique
+  icon      String?
+  medicines Medicine[]
+  createdAt DateTime   @default(now())
+}
+
+model Manufacturer {
+  id        Int        @id @default(autoincrement())
+  name      String
+  country   String
+  medicines Medicine[]
+  createdAt DateTime   @default(now())
+}
+
+model Medicine {
+  id                   Int                       @id @default(autoincrement())
+  name                 String
+  internationalName    String?
+  activeSubstance      String?
+  description          String?
+  price                Float
+  discountPrice        Float?
+  prescriptionRequired Boolean                   @default(false)
+  ageLimit             String?
+  quantityInStock      Int                       @default(0)
+  
+  category             Category?                 @relation(fields: [categoryId], references: [id])
+  categoryId           Int?
+  
+  manufacturer         Manufacturer?             @relation(fields: [manufacturerId], references: [id])
+  manufacturerId       Int?
+
+  details              MedicineDetail?
+  usage                MedicineUsage?
+  sideEffects          MedicineSideEffect?
+  contraindications    MedicineContraindication?
+  storage              MedicineStorage?
+  images               MedicineImage[]
+  
+  createdAt            DateTime                  @default(now())
+  updatedAt            DateTime                  @updatedAt
+}
+
+model MedicineDetail {
+  id                   Int      @id @default(autoincrement())
+  medicine             Medicine @relation(fields: [medicineId], references: [id], onDelete: Cascade)
+  medicineId           Int      @unique
+  pharmacologicalGroup String?
+  packageType          String?
+  packageSize          String?
+}
+
+model MedicineUsage {
+  id               Int      @id @default(autoincrement())
+  medicine         Medicine @relation(fields: [medicineId], references: [id], onDelete: Cascade)
+  medicineId       Int      @unique
+  usageAreas       String?
+  adultDosage      String?
+  childDosage      String?
+  howToUse         String?
+  timesPerDay      String?
+  beforeOrAfterMeal String?
+}
+
+model MedicineSideEffect {
+  id         Int      @id @default(autoincrement())
+  medicine   Medicine @relation(fields: [medicineId], references: [id], onDelete: Cascade)
+  medicineId Int      @unique
+  effects    String?    // Stored as stringified JSON
+}
+
+model MedicineContraindication {
+  id         Int      @id @default(autoincrement())
+  medicine   Medicine @relation(fields: [medicineId], references: [id], onDelete: Cascade)
+  medicineId Int      @unique
+  conditions String?    // Stored as stringified JSON
+}
+
+model MedicineStorage {
+  id          Int      @id @default(autoincrement())
+  medicine    Medicine @relation(fields: [medicineId], references: [id], onDelete: Cascade)
+  medicineId  Int      @unique
+  temperature String?
+  humidity    String?
+  light       String?
+  shelfLife   String?
+}
+
+model MedicineImage {
+  id         Int      @id @default(autoincrement())
+  medicine   Medicine @relation(fields: [medicineId], references: [id], onDelete: Cascade)
+  medicineId Int
+  url        String
+  isPrimary  Boolean  @default(false)
+}
