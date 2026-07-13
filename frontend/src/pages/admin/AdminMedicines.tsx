@@ -1,25 +1,20 @@
 import { useEffect, useState } from 'react';
-import { Trash2, Plus, X } from 'lucide-react';
+import { Trash2, Plus, X, Edit2 } from 'lucide-react';
 import api from '../../services/api';
 import { formatPrice } from '../../utils/format';
+import type { Medicine, Category, Manufacturer, MedicineFormData } from '../../types';
+import { EMPTY_MEDICINE_FORM, getImageUrl } from '../../types';
+import toast from 'react-hot-toast';
 
 export default function AdminMedicines() {
-  const [medicines, setMedicines] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [manufacturers, setManufacturers] = useState([]);
+  const [medicines, setMedicines] = useState<Medicine[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [manufacturers, setManufacturers] = useState<Manufacturer[]>([]);
   const [loading, setLoading] = useState(true);
   
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formData, setFormData] = useState<any>({
-    name: '', internationalName: '', activeSubstance: '', description: '',
-    price: '', discountPrice: '', prescriptionRequired: false, ageLimit: '',
-    quantityInStock: '', categoryId: '', manufacturerId: '',
-    pharmacologicalGroup: '', packageType: '', packageSize: '',
-    usageAreas: '', adultDosage: '', childDosage: '', howToUse: '',
-    timesPerDay: '', beforeOrAfterMeal: '',
-    sideEffects: '', contraindications: '',
-    temperature: '', humidity: '', light: '', shelfLife: '',
-  });
+  const [currentMedicine, setCurrentMedicine] = useState<Medicine | null>(null);
+  const [formData, setFormData] = useState<MedicineFormData>(EMPTY_MEDICINE_FORM);
   const [file, setFile] = useState<File | null>(null);
 
   const fetchData = async () => {
@@ -35,6 +30,7 @@ export default function AdminMedicines() {
       setManufacturers(manRes.data);
     } catch (error) {
       console.error(error);
+      toast.error('Ma\'lumotlarni yuklashda xatolik');
     } finally {
       setLoading(false);
     }
@@ -44,17 +40,41 @@ export default function AdminMedicines() {
     fetchData();
   }, []);
 
-  const openModal = () => {
-    setFormData({
-      name: '', internationalName: '', activeSubstance: '', description: '',
-      price: '', discountPrice: '', prescriptionRequired: false, ageLimit: '',
-      quantityInStock: '', categoryId: '', manufacturerId: '',
-      pharmacologicalGroup: '', packageType: '', packageSize: '',
-      usageAreas: '', adultDosage: '', childDosage: '', howToUse: '',
-      timesPerDay: '', beforeOrAfterMeal: '',
-      sideEffects: '', contraindications: '',
-      temperature: '', humidity: '', light: '', shelfLife: '',
-    });
+  const openModal = (medicine?: Medicine) => {
+    if (medicine) {
+      setCurrentMedicine(medicine);
+      setFormData({
+        name: medicine.name || '',
+        internationalName: medicine.internationalName || '',
+        activeSubstance: medicine.activeSubstance || '',
+        description: medicine.description || '',
+        price: medicine.price.toString(),
+        discountPrice: medicine.discountPrice?.toString() || '',
+        prescriptionRequired: medicine.prescriptionRequired || false,
+        ageLimit: medicine.ageLimit || '',
+        quantityInStock: medicine.quantityInStock.toString(),
+        categoryId: medicine.categoryId?.toString() || '',
+        manufacturerId: medicine.manufacturerId?.toString() || '',
+        pharmacologicalGroup: medicine.details?.pharmacologicalGroup || '',
+        packageType: medicine.details?.packageType || '',
+        packageSize: medicine.details?.packageSize || '',
+        usageAreas: medicine.usage?.usageAreas || '',
+        adultDosage: medicine.usage?.adultDosage || '',
+        childDosage: medicine.usage?.childDosage || '',
+        howToUse: medicine.usage?.howToUse || '',
+        timesPerDay: medicine.usage?.timesPerDay || '',
+        beforeOrAfterMeal: medicine.usage?.beforeOrAfterMeal || '',
+        sideEffects: medicine.sideEffects?.effects ? JSON.parse(medicine.sideEffects.effects).join(', ') : '',
+        contraindications: medicine.contraindications?.conditions ? JSON.parse(medicine.contraindications.conditions).join(', ') : '',
+        temperature: medicine.storage?.temperature || '',
+        humidity: medicine.storage?.humidity || '',
+        light: medicine.storage?.light || '',
+        shelfLife: medicine.storage?.shelfLife || '',
+      });
+    } else {
+      setCurrentMedicine(null);
+      setFormData(EMPTY_MEDICINE_FORM);
+    }
     setFile(null);
     setIsModalOpen(true);
   };
@@ -66,25 +86,34 @@ export default function AdminMedicines() {
     try {
       const data = new FormData();
       Object.keys(formData).forEach(key => {
+        const value = formData[key as keyof MedicineFormData];
         if (key === 'sideEffects' || key === 'contraindications') {
-          if (formData[key]) {
-            data.append(key, JSON.stringify(formData[key].split(',').map((s: string) => s.trim())));
+          if (value && typeof value === 'string') {
+            data.append(key, JSON.stringify(value.split(',').map(s => s.trim())));
           }
         } else {
-          data.append(key, formData[key]);
+          data.append(key, String(value));
         }
       });
       if (file) data.append('image', file);
 
-      await api.post('/medicines', data, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
+      if (currentMedicine) {
+        await api.put(`/medicines/${currentMedicine.id}`, data, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        toast.success('Dori muvaffaqiyatli yangilandi');
+      } else {
+        await api.post('/medicines', data, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        toast.success('Dori muvaffaqiyatli qo\'shildi');
+      }
       
       closeModal();
       fetchData();
     } catch (error) {
       console.error(error);
-      alert('Xatolik yuz berdi');
+      toast.error('Xatolik yuz berdi');
     }
   };
 
@@ -92,16 +121,19 @@ export default function AdminMedicines() {
     if (window.confirm("Rostdan ham o'chirmoqchimisiz?")) {
       try {
         await api.delete(`/medicines/${id}`);
+        toast.success('Dori o\'chirildi');
         fetchData();
       } catch (error) {
         console.error(error);
+        toast.error('O\'chirishda xatolik');
       }
     }
   };
 
-  const handleInputChange = (e: any) => {
-    const { name, value, type, checked } = e.target;
-    setFormData((prev: any) => ({
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value, type } = e.target;
+    const checked = (e.target as HTMLInputElement).checked;
+    setFormData((prev) => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }));
@@ -112,7 +144,7 @@ export default function AdminMedicines() {
       <div className="p-6 border-b border-slate-200 bg-slate-50/50 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <h3 className="text-lg font-bold text-slate-800">Dorilar boshqaruvi</h3>
         <button 
-          onClick={openModal}
+          onClick={() => openModal()}
           className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors shrink-0"
         >
           <Plus size={18} />
@@ -141,12 +173,12 @@ export default function AdminMedicines() {
                 <td colSpan={5} className="p-4 text-center text-slate-500">Dorilar yo'q</td>
               </tr>
             ) : (
-              medicines.map((med: any) => (
+              medicines.map((med) => (
                 <tr key={med.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
                   <td className="p-4">
                     <div className="flex items-center space-x-3">
                       <img 
-                        src={med.images?.[0]?.url?.startsWith('http') ? med.images[0].url : `http://localhost:4000${med.images?.[0]?.url || '/placeholder.png'}`} 
+                        src={getImageUrl(med.images?.[0]?.url)} 
                         alt="" 
                         className="w-10 h-10 object-cover rounded-lg bg-slate-100"
                       />
@@ -163,10 +195,18 @@ export default function AdminMedicines() {
                       {med.quantityInStock} dona
                     </span>
                   </td>
-                  <td className="p-4 text-right space-x-2">
+                  <td className="p-4 text-right space-x-2 whitespace-nowrap">
+                    <button 
+                      onClick={() => openModal(med)}
+                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors inline-block"
+                      title="Tahrirlash"
+                    >
+                      <Edit2 size={18} />
+                    </button>
                     <button 
                       onClick={() => handleDelete(med.id)}
                       className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors inline-block"
+                      title="O'chirish"
                     >
                       <Trash2 size={18} />
                     </button>
@@ -183,7 +223,9 @@ export default function AdminMedicines() {
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={closeModal}></div>
           <div className="relative w-full max-w-4xl bg-white h-full overflow-y-auto shadow-2xl ml-auto flex flex-col">
             <div className="flex items-center justify-between p-6 border-b border-slate-100 bg-slate-50">
-              <h3 className="text-xl font-bold text-slate-800">Yangi dori qo'shish</h3>
+              <h3 className="text-xl font-bold text-slate-800">
+                {currentMedicine ? 'Dorini tahrirlash' : 'Yangi dori qo\'shish'}
+              </h3>
               <button onClick={closeModal} className="text-slate-400 hover:text-slate-600 bg-white p-2 rounded-full shadow-sm">
                 <X size={24} />
               </button>
@@ -208,14 +250,14 @@ export default function AdminMedicines() {
                       <label className="block text-sm font-medium text-slate-700 mb-1">Kategoriya *</label>
                       <select name="categoryId" value={formData.categoryId} onChange={handleInputChange} className="w-full border border-slate-200 rounded-xl p-3 bg-slate-50 focus:border-blue-500" required>
                         <option value="">Tanlang</option>
-                        {categories.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                        {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                       </select>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-1">Ishlab chiqaruvchi *</label>
                       <select name="manufacturerId" value={formData.manufacturerId} onChange={handleInputChange} className="w-full border border-slate-200 rounded-xl p-3 bg-slate-50 focus:border-blue-500" required>
                         <option value="">Tanlang</option>
-                        {manufacturers.map((m: any) => <option key={m.id} value={m.id}>{m.name}</option>)}
+                        {manufacturers.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
                       </select>
                     </div>
                     <div>
@@ -229,6 +271,9 @@ export default function AdminMedicines() {
                     <div className="md:col-span-2">
                       <label className="block text-sm font-medium text-slate-700 mb-1">Rasm yuklash</label>
                       <input type="file" accept="image/*" onChange={(e) => setFile(e.target.files ? e.target.files[0] : null)} className="w-full border border-slate-200 rounded-xl p-2 bg-slate-50 focus:border-blue-500" />
+                      {currentMedicine && currentMedicine.images && currentMedicine.images.length > 0 && !file && (
+                        <p className="text-xs text-slate-500 mt-2">Joriy rasm mavjud. O'zgartirish uchun yangi yuklang.</p>
+                      )}
                     </div>
                   </div>
                 </section>
@@ -262,7 +307,7 @@ export default function AdminMedicines() {
                     Bekor qilish
                   </button>
                   <button type="submit" className="flex-1 bg-blue-600 text-white py-4 rounded-xl font-medium hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/30">
-                    Saqlash va qo'shish
+                    {currentMedicine ? 'O\'zgarishlarni saqlash' : 'Saqlash va qo\'shish'}
                   </button>
                 </div>
               </div>

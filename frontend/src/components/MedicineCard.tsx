@@ -1,13 +1,16 @@
 import { Link } from 'react-router-dom';
 import { Tag, Building2, ExternalLink } from 'lucide-react';
 import { formatPrice } from '../utils/format';
+import type { Medicine } from '../types';
+import { getImageUrl } from '../types';
 
 interface MedicineProps {
-  medicine: any;
+  medicine: Medicine;
 }
 
 export default function MedicineCard({ medicine }: MedicineProps) {
-  const primaryImage = medicine.images?.find((img: any) => img.isPrimary)?.url || '/placeholder-pill.png';
+  const primaryImage = medicine.images?.find((img) => img.isPrimary)?.url;
+  const imageUrl = getImageUrl(primaryImage);
 
   return (
     <div className="bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-100 overflow-hidden group flex flex-col h-full relative">
@@ -33,7 +36,7 @@ export default function MedicineCard({ medicine }: MedicineProps) {
       {/* Image */}
       <div className="h-48 w-full bg-slate-50 p-6 relative overflow-hidden flex items-center justify-center">
         <img 
-          src={primaryImage.startsWith('http') ? primaryImage : `http://localhost:4000${primaryImage}`} 
+          src={imageUrl} 
           alt={medicine.name} 
           className="max-h-full object-contain group-hover:scale-110 transition-transform duration-500 mix-blend-multiply"
         />

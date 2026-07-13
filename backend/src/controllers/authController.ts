@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
-import { prisma } from '../index';
+import { prisma } from '../lib/prisma';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_pharmacy_key_2026';
 

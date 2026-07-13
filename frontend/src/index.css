@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:is(.dark *));
+
 @theme {
   --color-medical-primary: #1e3a8a; /* Blue 900 */
   --color-medical-secondary: #059669; /* Emerald 600 */

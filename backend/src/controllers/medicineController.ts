@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { prisma } from '../index';
+import { prisma } from '../lib/prisma';
 
 export const getMedicines = async (req: Request, res: Response) => {
   try {
@@ -142,15 +142,110 @@ export const updateMedicine = async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
     const data = req.body;
+    const file = req.file;
+
+    const sideEffects = data.sideEffects ? JSON.stringify(JSON.parse(data.sideEffects)) : undefined;
+    const contraindications = data.contraindications ? JSON.stringify(JSON.parse(data.contraindications)) : undefined;
+
+    const updateData: any = {
+      name: data.name,
+      internationalName: data.internationalName,
+      activeSubstance: data.activeSubstance,
+      description: data.description,
+      price: data.price ? Number(data.price) : undefined,
+      discountPrice: data.discountPrice ? Number(data.discountPrice) : null,
+      prescriptionRequired: data.prescriptionRequired === 'true' || data.prescriptionRequired === true,
+      ageLimit: data.ageLimit,
+      quantityInStock: data.quantityInStock ? Number(data.quantityInStock) : 0,
+      categoryId: data.categoryId ? Number(data.categoryId) : undefined,
+      manufacturerId: data.manufacturerId ? Number(data.manufacturerId) : undefined,
+    };
+
+    // Note: for a robust solution, we should update nested relations properly.
+    // Since Prisma update with nested create/update can be tricky if they don't exist,
+    // we use upsert for relations.
 
     const medicine = await prisma.medicine.update({
       where: { id: Number(id) },
       data: {
-        name: data.name,
-        price: data.price ? Number(data.price) : undefined,
-        quantityInStock: data.quantityInStock ? Number(data.quantityInStock) : undefined,
+        ...updateData,
+        details: {
+          upsert: {
+            create: {
+              pharmacologicalGroup: data.pharmacologicalGroup,
+              packageType: data.packageType,
+              packageSize: data.packageSize,
+            },
+            update: {
+              pharmacologicalGroup: data.pharmacologicalGroup,
+              packageType: data.packageType,
+              packageSize: data.packageSize,
+            }
+          }
+        },
+        usage: {
+          upsert: {
+            create: {
+              usageAreas: data.usageAreas,
+              adultDosage: data.adultDosage,
+              childDosage: data.childDosage,
+              howToUse: data.howToUse,
+              timesPerDay: data.timesPerDay,
+              beforeOrAfterMeal: data.beforeOrAfterMeal,
+            },
+            update: {
+              usageAreas: data.usageAreas,
+              adultDosage: data.adultDosage,
+              childDosage: data.childDosage,
+              howToUse: data.howToUse,
+              timesPerDay: data.timesPerDay,
+              beforeOrAfterMeal: data.beforeOrAfterMeal,
+            }
+          }
+        },
+        sideEffects: {
+          upsert: {
+            create: { effects: sideEffects },
+            update: { effects: sideEffects }
+          }
+        },
+        contraindications: {
+          upsert: {
+            create: { conditions: contraindications },
+            update: { conditions: contraindications }
+          }
+        },
+        storage: {
+          upsert: {
+            create: {
+              temperature: data.temperature,
+              humidity: data.humidity,
+              light: data.light,
+              shelfLife: data.shelfLife,
+            },
+            update: {
+              temperature: data.temperature,
+              humidity: data.humidity,
+              light: data.light,
+              shelfLife: data.shelfLife,
+            }
+          }
+        },
       },
+      include: { images: true }
     });
+
+    if (file) {
+      // If a new file is uploaded, delete old images and add the new one.
+      await prisma.medicineImage.deleteMany({ where: { medicineId: Number(id) } });
+      await prisma.medicineImage.create({
+        data: {
+          url: `/uploads/${file.filename}`,
+          isPrimary: true,
+          medicineId: Number(id)
+        }
+      });
+    }
 
     res.json(medicine);
   } catch (error) {

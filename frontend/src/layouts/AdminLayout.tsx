@@ -1,11 +1,13 @@
 import { Outlet, Navigate, useNavigate } from 'react-router-dom';
-import { LogOut, LayoutDashboard, Pill, Tags } from 'lucide-react';
+import { LogOut, LayoutDashboard, Pill, Tags, Menu, X } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
+import { useState } from 'react';
 
 export default function AdminLayout() {
   const token = localStorage.getItem('token');
   const navigate = useNavigate();
   const location = useLocation();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   if (!token) {
     return <Navigate to="/admin/login" replace />;
@@ -25,16 +27,31 @@ export default function AdminLayout() {
 
   return (
     <div className="min-h-screen bg-slate-100 flex">
+      {/* Mobile Sidebar Overlay */}
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/50 z-40 md:hidden" 
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside className="w-64 bg-slate-900 text-white flex flex-col">
-        <div className="p-6 text-2xl font-bold border-b border-slate-700">
-          <span className="text-blue-500">BIO NEX STAR</span> Admin
+      <aside className={`
+        fixed inset-y-0 left-0 z-50 w-64 bg-slate-900 text-white flex flex-col transition-transform duration-300 ease-in-out md:static md:translate-x-0
+        ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+      `}>
+        <div className="p-6 text-2xl font-bold border-b border-slate-700 flex justify-between items-center">
+          <div><span className="text-blue-500">BIO NEX STAR</span> Admin</div>
+          <button className="md:hidden text-slate-400" onClick={() => setIsSidebarOpen(false)}>
+            <X size={24} />
+          </button>
         </div>
         <nav className="flex-grow p-4 space-y-2">
           {menu.map((item) => (
             <Link
               key={item.name}
               to={item.path}
+              onClick={() => setIsSidebarOpen(false)}
               className={`flex items-center space-x-3 p-3 rounded-lg transition-colors ${
                 location.pathname === item.path ? 'bg-blue-600 text-white' : 'text-slate-300 hover:bg-slate-800'
               }`}
@@ -56,17 +73,25 @@ export default function AdminLayout() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-grow flex flex-col">
-        <header className="bg-white border-b border-slate-200 h-16 flex items-center px-6 justify-between">
-          <h2 className="text-xl font-semibold text-slate-800">
-            {menu.find(m => m.path === location.pathname)?.name || 'Admin Panel'}
-          </h2>
+      <main className="flex-grow flex flex-col min-w-0">
+        <header className="bg-white border-b border-slate-200 h-16 flex items-center px-4 md:px-6 justify-between">
           <div className="flex items-center space-x-4">
-            <span className="text-sm text-slate-500">Admin xush kelibsiz!</span>
+            <button 
+              className="md:hidden text-slate-600 hover:text-slate-900"
+              onClick={() => setIsSidebarOpen(true)}
+            >
+              <Menu size={24} />
+            </button>
+            <h2 className="text-xl font-semibold text-slate-800 hidden sm:block">
+              {menu.find(m => m.path === location.pathname)?.name || 'Admin Panel'}
+            </h2>
+          </div>
+          <div className="flex items-center space-x-4">
+            <span className="text-sm text-slate-500 hidden sm:block">Admin xush kelibsiz!</span>
             <Link to="/" className="text-sm text-blue-600 hover:underline">Saytga qaytish</Link>
           </div>
         </header>
-        <div className="p-6 flex-grow overflow-auto">
+        <div className="p-4 md:p-6 flex-grow overflow-auto">
           <Outlet />
         </div>
       </main>

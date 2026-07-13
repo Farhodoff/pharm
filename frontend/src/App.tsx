@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import MainLayout from './layouts/MainLayout';
 import AdminLayout from './layouts/AdminLayout';
 
@@ -16,28 +17,31 @@ import AdminCategories from './pages/admin/AdminCategories';
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        {/* Public Routes */}
-        <Route path="/" element={<MainLayout />}>
-          <Route index element={<Home />} />
-          <Route path="search" element={<Search />} />
-          <Route path="medicine/:id" element={<MedicineDetail />} />
-        </Route>
+    <>
+      <Toaster position="top-right" />
+      <Router>
+        <Routes>
+          {/* Public Routes */}
+          <Route path="/" element={<MainLayout />}>
+            <Route index element={<Home />} />
+            <Route path="search" element={<Search />} />
+            <Route path="medicine/:id" element={<MedicineDetail />} />
+          </Route>
 
-        {/* Admin Login (no layout) */}
-        <Route path="/admin/login" element={<AdminLogin />} />
+          {/* Admin Login (no layout) */}
+          <Route path="/admin/login" element={<AdminLogin />} />
 
-        {/* Admin Routes with Layout */}
-        <Route path="/admin" element={<AdminLayout />}>
-          <Route index element={<AdminDashboard />} />
-          <Route path="medicines" element={<AdminMedicines />} />
-          <Route path="categories" element={<AdminCategories />} />
-        </Route>
+          {/* Admin Routes with Layout */}
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<AdminDashboard />} />
+            <Route path="medicines" element={<AdminMedicines />} />
+            <Route path="categories" element={<AdminCategories />} />
+          </Route>
 
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </Router>
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </Router>
+    </>
   );
 }
 

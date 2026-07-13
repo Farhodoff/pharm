@@ -3,10 +3,12 @@ import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Building2, AlertCircle, ShieldAlert, Tag, Package, Box } from 'lucide-react';
 import api from '../services/api';
 import { formatPrice } from '../utils/format';
+import type { Medicine } from '../types';
+import { getImageUrl } from '../types';
 
 export default function MedicineDetail() {
   const { id } = useParams();
-  const [medicine, setMedicine] = useState<any>(null);
+  const [medicine, setMedicine] = useState<Medicine | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('tavsif');
 
@@ -32,7 +34,8 @@ export default function MedicineDetail() {
     return <div className="pt-24 pb-16 min-h-screen flex items-center justify-center">Dori topilmadi.</div>;
   }
 
-  const primaryImage = medicine.images?.find((img: any) => img.isPrimary)?.url || '/placeholder-pill.png';
+  const primaryImage = medicine.images?.find((img) => img.isPrimary)?.url;
+  const imageUrl = getImageUrl(primaryImage);
 
   const tabs = [
     { id: 'tavsif', label: 'Tavsif' },
@@ -44,23 +47,23 @@ export default function MedicineDetail() {
   ];
 
   return (
-    <div className="pt-24 pb-16 bg-slate-50 min-h-screen">
+    <div className="pt-24 pb-16 bg-slate-50 min-h-screen dark:bg-slate-900 transition-colors duration-300">
       <div className="container mx-auto px-4">
         
-        <Link to={-1 as any} className="inline-flex items-center space-x-2 text-slate-500 hover:text-blue-600 mb-6 transition-colors">
+        <Link to={-1 as any} className="inline-flex items-center space-x-2 text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 mb-6 transition-colors">
           <ArrowLeft size={18} />
           <span>Orqaga</span>
         </Link>
 
         {/* Top Section */}
-        <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden mb-8">
+        <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden mb-8 transition-colors duration-300">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5">
             {/* Image */}
-            <div className="lg:col-span-2 bg-slate-100 p-8 flex items-center justify-center">
+            <div className="lg:col-span-2 bg-slate-100 dark:bg-slate-700 p-8 flex items-center justify-center transition-colors duration-300">
               <img 
-                src={primaryImage.startsWith('http') ? primaryImage : `http://localhost:4000${primaryImage}`} 
+                src={imageUrl} 
                 alt={medicine.name} 
-                className="max-h-96 object-contain mix-blend-multiply drop-shadow-xl"
+                className="max-h-96 object-contain mix-blend-multiply dark:mix-blend-normal drop-shadow-xl"
               />
             </div>
 
