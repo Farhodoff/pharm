@@ -18,17 +18,17 @@ export default function Home() {
       try {
         const [catRes, medRes] = await Promise.all([
           api.get('/categories'),
-          api.get('/medicines')
+          api.get('/medicines?limit=20')
         ]);
         setCategories(catRes.data);
-        
-        // Simulating popular (just taking first 4)
-        setPopularMedicines(medRes.data.slice(0, 4));
-        
-        // Simulating discounted
-        const discounted = medRes.data.filter((m: any) => m.discountPrice).slice(0, 4);
+
+        // Popular = first 4
+        setPopularMedicines(medRes.data.data.slice(0, 4));
+
+        // Discounted
+        const discounted = medRes.data.data.filter((m: any) => m.discountPrice).slice(0, 4);
         setDiscountMedicines(discounted);
-        
+
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {
@@ -48,29 +48,32 @@ export default function Home() {
   return (
     <div className="pt-16">
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-blue-900 to-slate-900 text-white py-24 overflow-hidden">
+      <section className="relative bg-gradient-to-br from-blue-900 to-slate-900 text-white py-16 md:py-24 overflow-hidden">
         <div className="absolute inset-0 z-0 opacity-20 bg-[url('https://images.unsplash.com/photo-1587854692152-cbe660dbde88?q=80&w=2000')] bg-cover bg-center mix-blend-overlay"></div>
         <div className="container mx-auto px-4 relative z-10 flex flex-col items-center text-center">
-          <span className="bg-blue-600/30 text-blue-200 border border-blue-500/30 px-4 py-1.5 rounded-full text-sm font-semibold mb-6 backdrop-blur-sm">
+          <span className="bg-blue-600/30 text-blue-200 border border-blue-500/30 px-3 py-1 md:px-4 md:py-1.5 rounded-full text-xs md:text-sm font-semibold mb-6 backdrop-blur-sm">
             #1 Farmasevtika Ma'lumotnomasi
           </span>
-          <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
+          <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold mb-4 md:mb-6 leading-tight">
             Sifatli farmasevtika <br className="hidden md:block"/> mahsulotlari
           </h1>
-          <p className="text-lg md:text-xl text-blue-100 mb-10 max-w-2xl">
+          <p className="text-base sm:text-lg md:text-xl text-blue-100 mb-8 md:mb-10 max-w-2xl px-2">
             Kerakli dorini tez va oson toping. Barcha ma'lumotlar ishonchli manbalardan.
           </p>
           
-          <form onSubmit={handleSearch} className="w-full max-w-2xl relative flex items-center bg-white rounded-full p-2 shadow-2xl">
-            <SearchIcon className="text-slate-400 ml-4" size={24} />
-            <input 
-              type="text" 
-              placeholder="Dori nomi, kasallik yoki faol moddani kiriting..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="flex-grow px-4 py-3 text-slate-800 bg-transparent focus:outline-none text-lg"
-            />
-            <button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-full font-medium transition-colors">
+          <form onSubmit={handleSearch} className="w-full max-w-2xl relative flex flex-col sm:flex-row items-center bg-transparent sm:bg-white rounded-2xl sm:rounded-full p-0 sm:p-2 shadow-none sm:shadow-2xl gap-2 sm:gap-0">
+            <div className="w-full relative flex items-center bg-white rounded-full p-2 sm:p-0">
+              <SearchIcon className="text-slate-400 ml-4 hidden sm:block" size={24} />
+              <SearchIcon className="text-slate-400 ml-2 sm:hidden" size={20} />
+              <input 
+                type="text" 
+                placeholder="Dori nomi, kasallik yoki modda..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="flex-grow px-3 sm:px-4 py-2 sm:py-3 text-slate-800 bg-transparent focus:outline-none text-base sm:text-lg w-full"
+              />
+            </div>
+            <button type="submit" className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-6 sm:px-8 py-3 sm:py-3 rounded-full font-medium transition-colors mt-2 sm:mt-0">
               Qidirish
             </button>
           </form>

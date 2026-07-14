@@ -11,13 +11,12 @@ export default function AdminDashboard() {
   const [medicines, setMedicines] = useState<any[]>([]);
 
   useEffect(() => {
-    // Fetch stats and medicines for export
     Promise.all([
       api.get('/medicines/stats'),
-      api.get('/medicines')
+      api.get('/medicines?limit=1000')
     ]).then(([statsRes, medsRes]) => {
       setStats(statsRes.data);
-      setMedicines(medsRes.data);
+      setMedicines(medsRes.data.data);
     });
   }, []);
 
@@ -48,11 +47,11 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <h2 className="text-2xl font-bold text-slate-800">Boshqaruv paneli</h2>
         <button 
           onClick={exportToExcel}
-          className="flex items-center space-x-2 bg-emerald-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-emerald-700 transition-colors"
+          className="flex items-center justify-center space-x-2 bg-emerald-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-emerald-700 transition-colors w-full sm:w-auto"
         >
           <Download size={18} />
           <span>Excel ga yuklash (Dorilar)</span>

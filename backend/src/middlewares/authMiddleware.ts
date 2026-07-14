@@ -1,7 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
+import { config } from '../lib/config';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_pharmacy_key_2026';
+const JWT_SECRET = config.jwtSecret;
 
 export interface AuthRequest extends Request {
   adminId?: number;

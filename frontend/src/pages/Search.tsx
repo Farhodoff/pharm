@@ -1,18 +1,23 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Filter, SlidersHorizontal, X, Search as SearchIcon } from 'lucide-react';
+import { Filter, SlidersHorizontal, X, Search as SearchIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import api from '../services/api';
 import MedicineCard from '../components/MedicineCard';
 import { useSearchStore } from '../store/useSearchStore';
 
+const ITEMS_PER_PAGE = 12;
+
 export default function Search() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { searchQuery, setSearchQuery } = useSearchStore();
-  
-  const [medicines, setMedicines] = useState([]);
-  const [categories, setCategories] = useState([]);
+
+  const [medicines, setMedicines] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const [total, setTotal] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
+  const totalPages = Math.ceil(total / ITEMS_PER_PAGE);
 
   const [filters, setFilters] = useState({
     category: searchParams.get('category') || '',
@@ -23,73 +28,72 @@ export default function Search() {
   });
 
   useEffect(() => {
-    // Initial sync of URL search query to store
     const q = searchParams.get('q');
-    if (q && q !== searchQuery) {
-      setSearchQuery(q);
-    }
-    
+    if (q && q !== searchQuery) setSearchQuery(q);
     api.get('/categories').then(res => setCategories(res.data));
   }, []);
 
-  useEffect(() => {
-    const fetchMedicines = async () => {
-      setLoading(true);
-      try {
-        const params = new URLSearchParams();
-        if (searchQuery) params.append('search', searchQuery);
-        if (filters.category) params.append('category', filters.category);
-        if (filters.minPrice) params.append('minPrice', filters.minPrice);
-        if (filters.maxPrice) params.append('maxPrice', filters.maxPrice);
-        if (filters.ageLimit) params.append('ageLimit', filters.ageLimit);
-        if (filters.prescriptionRequired) params.append('prescriptionRequired', filters.prescriptionRequired);
-        
-        // Handling special query params like discount and latest if navigated from home
-        if (searchParams.get('discount') === 'true') {
-          // the backend doesn't have ?discount=true query yet, but we'll fetch all and filter in frontend for simplicity
-        }
+  const fetchMedicines = useCallback(async (page = 1) => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (searchQuery) params.append('search', searchQuery);
+      if (filters.category) params.append('category', filters.category);
+      if (filters.minPrice) params.append('minPrice', filters.minPrice);
+      if (filters.maxPrice) params.append('maxPrice', filters.maxPrice);
+      if (filters.ageLimit) params.append('ageLimit', filters.ageLimit);
+      if (filters.prescriptionRequired) params.append('prescriptionRequired', filters.prescriptionRequired);
+      params.append('page', String(page));
+      params.append('limit', String(ITEMS_PER_PAGE));
 
-        const res = await api.get(`/medicines?${params.toString()}`);
-        let data = res.data;
+      const res = await api.get(`/medicines?${params.toString()}`);
+      let data = res.data.data;
+      let totalCount = res.data.total;
 
-        if (searchParams.get('discount') === 'true') {
-          data = data.filter((m: any) => m.discountPrice !== null);
-        }
-
-        setMedicines(data);
-      } catch (error) {
-        console.error('Error fetching medicines', error);
-      } finally {
-        setLoading(false);
+      // Frontend filter for discount (no backend support yet)
+      if (searchParams.get('discount') === 'true') {
+        data = data.filter((m: any) => m.discountPrice !== null);
+        totalCount = data.length;
       }
-    };
 
+      setMedicines(data);
+      setTotal(totalCount);
+    } catch (error) {
+      console.error('Error fetching medicines', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [searchQuery, filters, searchParams]);
+
+  useEffect(() => {
     // Update URL params
     const newParams = new URLSearchParams();
     if (searchQuery) newParams.set('q', searchQuery);
     if (filters.category) newParams.set('category', filters.category);
+    if (filters.minPrice) newParams.set('minPrice', filters.minPrice);
+    if (filters.maxPrice) newParams.set('maxPrice', filters.maxPrice);
+    if (filters.ageLimit) newParams.set('ageLimit', filters.ageLimit);
+    if (filters.prescriptionRequired) newParams.set('prescriptionRequired', filters.prescriptionRequired);
     if (searchParams.get('discount')) newParams.set('discount', 'true');
     setSearchParams(newParams, { replace: true });
 
-    const timeoutId = setTimeout(() => {
-      fetchMedicines();
-    }, 300); // Debounce search
-
+    setCurrentPage(1);
+    const timeoutId = setTimeout(() => fetchMedicines(1), 300);
     return () => clearTimeout(timeoutId);
   }, [searchQuery, filters]);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    fetchMedicines(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   const handleFilterChange = (key: string, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }));
   };
 
   const resetFilters = () => {
-    setFilters({
-      category: '',
-      minPrice: '',
-      maxPrice: '',
-      ageLimit: '',
-      prescriptionRequired: '',
-    });
+    setFilters({ category: '', minPrice: '', maxPrice: '', ageLimit: '', prescriptionRequired: '' });
     setSearchQuery('');
   };
 
@@ -108,7 +112,7 @@ export default function Search() {
       {/* Category */}
       <div>
         <label className="block text-sm font-medium text-slate-700 mb-2">Kategoriya</label>
-        <select 
+        <select
           className="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-700"
           value={filters.category}
           onChange={(e) => handleFilterChange('category', e.target.value)}
@@ -124,17 +128,17 @@ export default function Search() {
       <div>
         <label className="block text-sm font-medium text-slate-700 mb-2">Narx (so'm)</label>
         <div className="flex items-center space-x-2">
-          <input 
-            type="number" 
-            placeholder="Min" 
+          <input
+            type="number"
+            placeholder="Min"
             value={filters.minPrice}
             onChange={(e) => handleFilterChange('minPrice', e.target.value)}
             className="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm text-slate-700"
           />
-          <span className="text-slate-400">-</span>
-          <input 
-            type="number" 
-            placeholder="Max" 
+          <span className="text-slate-400">—</span>
+          <input
+            type="number"
+            placeholder="Max"
             value={filters.maxPrice}
             onChange={(e) => handleFilterChange('maxPrice', e.target.value)}
             className="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm text-slate-700"
@@ -145,7 +149,7 @@ export default function Search() {
       {/* Age Limit */}
       <div>
         <label className="block text-sm font-medium text-slate-700 mb-2">Yosh chegarasi</label>
-        <select 
+        <select
           className="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-700"
           value={filters.ageLimit}
           onChange={(e) => handleFilterChange('ageLimit', e.target.value)}
@@ -163,52 +167,86 @@ export default function Search() {
       <div>
         <label className="block text-sm font-medium text-slate-700 mb-2">Retsept</label>
         <div className="space-y-2">
-          <label className="flex items-center space-x-2 cursor-pointer">
-            <input 
-              type="radio" 
-              name="prescription" 
-              value="" 
-              checked={filters.prescriptionRequired === ''}
-              onChange={(e) => handleFilterChange('prescriptionRequired', e.target.value)}
-              className="text-blue-600 focus:ring-blue-500 h-4 w-4"
-            />
-            <span className="text-sm text-slate-600">Barchasi</span>
-          </label>
-          <label className="flex items-center space-x-2 cursor-pointer">
-            <input 
-              type="radio" 
-              name="prescription" 
-              value="false" 
-              checked={filters.prescriptionRequired === 'false'}
-              onChange={(e) => handleFilterChange('prescriptionRequired', e.target.value)}
-              className="text-blue-600 focus:ring-blue-500 h-4 w-4"
-            />
-            <span className="text-sm text-slate-600">Retseptsiz</span>
-          </label>
-          <label className="flex items-center space-x-2 cursor-pointer">
-            <input 
-              type="radio" 
-              name="prescription" 
-              value="true" 
-              checked={filters.prescriptionRequired === 'true'}
-              onChange={(e) => handleFilterChange('prescriptionRequired', e.target.value)}
-              className="text-blue-600 focus:ring-blue-500 h-4 w-4"
-            />
-            <span className="text-sm text-slate-600">Retsept bilan</span>
-          </label>
+          {[
+            { value: '', label: 'Barchasi' },
+            { value: 'false', label: 'Retseptsiz' },
+            { value: 'true', label: 'Retsept bilan' },
+          ].map(opt => (
+            <label key={opt.value} className="flex items-center space-x-2 cursor-pointer">
+              <input
+                type="radio"
+                name="prescription"
+                value={opt.value}
+                checked={filters.prescriptionRequired === opt.value}
+                onChange={(e) => handleFilterChange('prescriptionRequired', e.target.value)}
+                className="text-blue-600 focus:ring-blue-500 h-4 w-4"
+              />
+              <span className="text-sm text-slate-600">{opt.label}</span>
+            </label>
+          ))}
         </div>
       </div>
     </div>
   );
 
+  const Pagination = () => {
+    if (totalPages <= 1) return null;
+    const pages = [];
+    for (let i = 1; i <= totalPages; i++) {
+      if (
+        i === 1 || i === totalPages ||
+        (i >= currentPage - 1 && i <= currentPage + 1)
+      ) {
+        pages.push(i);
+      } else if (pages[pages.length - 1] !== -1) {
+        pages.push(-1); // ellipsis
+      }
+    }
+    return (
+      <div className="flex items-center justify-center space-x-2 mt-10">
+        <button
+          onClick={() => handlePageChange(currentPage - 1)}
+          disabled={currentPage === 1}
+          className="p-2 rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+        >
+          <ChevronLeft size={18} />
+        </button>
+        {pages.map((p, i) =>
+          p === -1 ? (
+            <span key={`ellipsis-${i}`} className="text-slate-400 px-1">…</span>
+          ) : (
+            <button
+              key={p}
+              onClick={() => handlePageChange(p)}
+              className={`w-10 h-10 rounded-xl text-sm font-semibold transition-colors ${
+                currentPage === p
+                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/30'
+                  : 'border border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+              }`}
+            >
+              {p}
+            </button>
+          )
+        )}
+        <button
+          onClick={() => handlePageChange(currentPage + 1)}
+          disabled={currentPage === totalPages}
+          className="p-2 rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+        >
+          <ChevronRight size={18} />
+        </button>
+      </div>
+    );
+  };
+
   return (
     <div className="pt-24 pb-16 bg-slate-50 min-h-screen">
       <div className="container mx-auto px-4">
-        
+
         {/* Mobile Filter Toggle */}
         <div className="md:hidden mb-4 flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-slate-800">Qidiruv natijalari</h1>
-          <button 
+          <h1 className="text-xl font-bold text-slate-800">Qidiruv natijalari</h1>
+          <button
             onClick={() => setShowMobileFilters(true)}
             className="flex items-center space-x-2 bg-white border border-slate-200 px-4 py-2 rounded-lg text-slate-700"
           >
@@ -231,19 +269,26 @@ export default function Search() {
               <h1 className="text-2xl font-bold text-slate-800">
                 {searchQuery ? `"${searchQuery}" bo'yicha natijalar` : 'Barcha dorilar'}
               </h1>
-              <span className="text-slate-500">{medicines.length} ta topildi</span>
+              <span className="text-slate-500 bg-white border border-slate-200 px-3 py-1 rounded-full text-sm">
+                {total} ta topildi
+              </span>
             </div>
 
             {loading ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {[1,2,3,4,5,6].map(i => <div key={i} className="h-80 bg-slate-200 animate-pulse rounded-2xl"></div>)}
-              </div>
-            ) : medicines.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                {medicines.map((med: any) => (
-                  <MedicineCard key={med.id} medicine={med} />
+                {[1, 2, 3, 4, 5, 6, 8].map(i => (
+                  <div key={i} className="h-80 bg-slate-200 animate-pulse rounded-2xl"></div>
                 ))}
               </div>
+            ) : medicines.length > 0 ? (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {medicines.map((med: any) => (
+                    <MedicineCard key={med.id} medicine={med} />
+                  ))}
+                </div>
+                <Pagination />
+              </>
             ) : (
               <div className="bg-white rounded-2xl border border-slate-200 p-16 text-center">
                 <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
@@ -251,7 +296,7 @@ export default function Search() {
                 </div>
                 <h2 className="text-xl font-bold text-slate-800 mb-2">Hech narsa topilmadi</h2>
                 <p className="text-slate-500">Boshqa so'z bilan izlab ko'ring yoki filterlarni tozalang.</p>
-                <button 
+                <button
                   onClick={resetFilters}
                   className="mt-6 bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors"
                 >
@@ -268,7 +313,7 @@ export default function Search() {
         <div className="fixed inset-0 z-50 flex">
           <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowMobileFilters(false)}></div>
           <div className="relative w-4/5 max-w-sm bg-slate-50 h-full overflow-y-auto p-6 shadow-2xl ml-auto">
-            <button 
+            <button
               onClick={() => setShowMobileFilters(false)}
               className="absolute top-4 right-4 p-2 text-slate-500 bg-slate-200 rounded-full"
             >
@@ -277,11 +322,11 @@ export default function Search() {
             <div className="mt-8">
               <FilterSidebar />
             </div>
-            <button 
+            <button
               onClick={() => setShowMobileFilters(false)}
               className="w-full bg-blue-600 text-white py-3 rounded-xl mt-6 font-medium shadow-lg"
             >
-              Natijalarni ko'rish
+              Natijalarni ko'rish ({total} ta)
             </button>
           </div>
         </div>

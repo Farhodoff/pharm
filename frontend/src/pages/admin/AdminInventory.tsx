@@ -11,8 +11,8 @@ export default function AdminInventory() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const res = await api.get('/medicines');
-      setMedicines(res.data);
+      const res = await api.get('/medicines?limit=1000');
+      setMedicines(res.data.data);
     } catch (error) {
       console.error(error);
       toast.error('Ma\'lumotlarni yuklashda xatolik');

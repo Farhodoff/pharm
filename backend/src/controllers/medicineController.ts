@@ -3,7 +3,7 @@ import { prisma } from '../lib/prisma';
 
 export const getMedicines = async (req: Request, res: Response) => {
   try {
-    const { search, category, minPrice, maxPrice, ageLimit, prescriptionRequired } = req.query;
+    const { search, category, minPrice, maxPrice, ageLimit, prescriptionRequired, page, limit } = req.query;
 
     const filter: any = {};
 
@@ -14,7 +14,7 @@ export const getMedicines = async (req: Request, res: Response) => {
         { activeSubstance: { contains: String(search) } },
       ];
     }
-    
+
     if (category) filter.categoryId = Number(category);
     if (minPrice || maxPrice) {
       filter.price = {};
@@ -22,19 +22,32 @@ export const getMedicines = async (req: Request, res: Response) => {
       if (maxPrice) filter.price.lte = Number(maxPrice);
     }
     if (ageLimit) filter.ageLimit = String(ageLimit);
-    if (prescriptionRequired !== undefined) filter.prescriptionRequired = prescriptionRequired === 'true';
+    if (prescriptionRequired !== undefined && prescriptionRequired !== '') {
+      filter.prescriptionRequired = prescriptionRequired === 'true';
+    }
 
-    const medicines = await prisma.medicine.findMany({
-      where: filter,
-      include: {
-        category: true,
-        manufacturer: true,
-        images: true,
-      },
-      orderBy: { createdAt: 'desc' }
+    // Pagination
+    const pageNum = page ? Math.max(1, Number(page)) : null;
+    const limitNum = limit ? Math.min(100, Number(limit)) : null;
+    const skip = pageNum && limitNum ? (pageNum - 1) * limitNum : undefined;
+
+    const [medicines, total] = await Promise.all([
+      prisma.medicine.findMany({
+        where: filter,
+        include: { category: true, manufacturer: true, images: true },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limitNum ?? undefined,
+      }),
+      prisma.medicine.count({ where: filter }),
+    ]);
+
+    res.json({
+      data: medicines,
+      total,
+      page: pageNum ?? 1,
+      totalPages: limitNum ? Math.ceil(total / limitNum) : 1,
     });
-
-    res.json(medicines);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Error fetching medicines' });

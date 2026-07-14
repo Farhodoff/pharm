@@ -25,11 +25,11 @@ export default function AdminMedicines() {
     setLoading(true);
     try {
       const [medRes, catRes, manRes] = await Promise.all([
-        api.get('/medicines'),
+        api.get('/medicines?limit=1000'),
         api.get('/categories'),
         api.get('/manufacturers')
       ]);
-      setMedicines(medRes.data);
+      setMedicines(medRes.data.data);
       setCategories(catRes.data);
       setManufacturers(manRes.data);
     } catch (error) {

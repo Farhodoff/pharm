@@ -2,8 +2,9 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../lib/prisma';
+import { config } from '../lib/config';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'super_secret_pharmacy_key_2026';
+const JWT_SECRET = config.jwtSecret;
 
 export const login = async (req: Request, res: Response) => {
   const { username, password } = req.body;
@@ -32,7 +33,7 @@ export const login = async (req: Request, res: Response) => {
 };
 
 export const updatePassword = async (req: Request, res: Response) => {
-  const adminId = (req as any).admin.id;
+  const adminId = (req as any).adminId;
   const { currentPassword, newPassword } = req.body;
 
   try {
