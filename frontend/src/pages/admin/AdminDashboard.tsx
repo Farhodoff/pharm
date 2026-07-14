@@ -1,18 +1,64 @@
 import { useEffect, useState } from 'react';
-import { Pill, Tags, AlertTriangle, PackageSearch } from 'lucide-react';
+import { Pill, Tags, AlertTriangle, PackageSearch, Download } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import * as XLSX from 'xlsx';
 import api from '../../services/api';
+
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState<any>(null);
+  const [medicines, setMedicines] = useState<any[]>([]);
 
   useEffect(() => {
-    api.get('/medicines/stats').then(res => setStats(res.data));
+    // Fetch stats and medicines for export
+    Promise.all([
+      api.get('/medicines/stats'),
+      api.get('/medicines')
+    ]).then(([statsRes, medsRes]) => {
+      setStats(statsRes.data);
+      setMedicines(medsRes.data);
+    });
   }, []);
 
   if (!stats) return <div className="p-4">Yuklanmoqda...</div>;
 
+  const exportToExcel = () => {
+    const dataToExport = medicines.map(m => ({
+      ID: m.id,
+      'Savdo nomi': m.name,
+      'Xalqaro nomi': m.internationalName || '',
+      Kategoriya: m.category?.name || '',
+      'Ishlab chiqaruvchi': m.manufacturer?.name || '',
+      Narx: m.price,
+      Omborda: m.quantityInStock,
+      'Yaroqlilik muddati': m.storage?.shelfLife || ''
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Dorilar");
+    XLSX.writeFile(workbook, "Dorilar_Ro'yxati.xlsx");
+  };
+
+  const categoryChartData = stats.categoryStats.map((cat: any) => ({
+    name: cat.name,
+    soni: cat._count.medicines
+  }));
+
   return (
     <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-2xl font-bold text-slate-800">Boshqaruv paneli</h2>
+        <button 
+          onClick={exportToExcel}
+          className="flex items-center space-x-2 bg-emerald-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-emerald-700 transition-colors"
+        >
+          <Download size={18} />
+          <span>Excel ga yuklash (Dorilar)</span>
+        </button>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {/* Card 1 */}
         <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center space-x-4">
@@ -44,8 +90,7 @@ export default function AdminDashboard() {
           <div>
             <p className="text-sm text-slate-500 font-medium">Ombordagi mahsulotlar</p>
             <h3 className="text-2xl font-bold text-slate-800">
-              {/* Total stock count could be sum, using total medicines for demo */}
-              Ko'p
+              {medicines.reduce((acc, curr) => acc + curr.quantityInStock, 0)} dona
             </h3>
           </div>
         </div>
@@ -62,27 +107,47 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Basic Chart/Table representation */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="p-6 border-b border-slate-200 bg-slate-50/50">
-          <h3 className="text-lg font-bold text-slate-800">Kategoriya bo'yicha dorilar</h3>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+          <h3 className="text-lg font-bold text-slate-800 mb-6">Kategoriya bo'yicha dorilar (Bar)</h3>
+          <div className="h-80 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={categoryChartData}
+                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="name" />
+                <YAxis allowDecimals={false} />
+                <Tooltip cursor={{ fill: 'transparent' }} />
+                <Bar dataKey="soni" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         </div>
-        <div className="p-6">
-          <div className="space-y-4">
-            {stats.categoryStats.map((cat: any) => (
-              <div key={cat.id} className="flex items-center justify-between">
-                <span className="text-slate-600 font-medium">{cat.name}</span>
-                <div className="flex items-center space-x-4 flex-grow ml-4">
-                  <div className="h-2 bg-slate-100 rounded-full flex-grow overflow-hidden relative">
-                    <div 
-                      className="absolute top-0 left-0 h-full bg-blue-500 rounded-full" 
-                      style={{ width: `${Math.min((cat._count.medicines / (stats.totalMedicines || 1)) * 100, 100)}%` }}
-                    ></div>
-                  </div>
-                  <span className="text-sm font-bold text-slate-800 w-8 text-right">{cat._count.medicines}</span>
-                </div>
-              </div>
-            ))}
+
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+          <h3 className="text-lg font-bold text-slate-800 mb-6">Kategoriya bo'yicha ulush (Pie)</h3>
+          <div className="h-80 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={categoryChartData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
+                  outerRadius={100}
+                  fill="#8884d8"
+                  dataKey="soni"
+                >
+                  {categoryChartData.map((_entry: any, index: number) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
           </div>
         </div>
       </div>

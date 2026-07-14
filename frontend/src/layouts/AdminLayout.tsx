@@ -1,5 +1,5 @@
 import { Outlet, Navigate, useNavigate } from 'react-router-dom';
-import { LogOut, LayoutDashboard, Pill, Tags, Menu, X } from 'lucide-react';
+import { LogOut, LayoutDashboard, Pill, Tags, Menu, X, Factory, PackageSearch, ShoppingCart, Users, Settings } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useState } from 'react';
 
@@ -23,6 +23,11 @@ export default function AdminLayout() {
     { name: 'Dashboard', path: '/admin', icon: <LayoutDashboard size={20} /> },
     { name: 'Medicines', path: '/admin/medicines', icon: <Pill size={20} /> },
     { name: 'Categories', path: '/admin/categories', icon: <Tags size={20} /> },
+    { name: 'Manufacturers', path: '/admin/manufacturers', icon: <Factory size={20} /> },
+    { name: 'Inventory', path: '/admin/inventory', icon: <PackageSearch size={20} /> },
+    { name: 'Orders', path: '/admin/orders', icon: <ShoppingCart size={20} /> },
+    { name: 'Customers', path: '/admin/users', icon: <Users size={20} /> },
+    { name: 'Settings', path: '/admin/settings', icon: <Settings size={20} /> },
   ];
 
   return (

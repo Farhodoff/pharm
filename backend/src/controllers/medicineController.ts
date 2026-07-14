@@ -73,7 +73,7 @@ export const getMedicineById = async (req: Request, res: Response) => {
 export const createMedicine = async (req: Request, res: Response) => {
   try {
     const data = req.body;
-    const file = req.file;
+    const files = req.files as Express.Multer.File[];
 
     // Parse nested objects if sent as strings (FormData from frontend)
     const sideEffects = data.sideEffects ? JSON.stringify(JSON.parse(data.sideEffects)) : undefined;
@@ -124,8 +124,11 @@ export const createMedicine = async (req: Request, res: Response) => {
             shelfLife: data.shelfLife,
           }
         },
-        images: file ? {
-          create: [{ url: `/uploads/${file.filename}`, isPrimary: true }]
+        images: files && files.length > 0 ? {
+          create: files.map((file, index) => ({
+            url: `/uploads/${file.filename}`,
+            isPrimary: index === 0
+          }))
         } : undefined
       },
       include: { images: true }
@@ -142,7 +145,7 @@ export const updateMedicine = async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
     const data = req.body;
-    const file = req.file;
+    const files = req.files as Express.Multer.File[];
 
     const sideEffects = data.sideEffects ? JSON.stringify(JSON.parse(data.sideEffects)) : undefined;
     const contraindications = data.contraindications ? JSON.stringify(JSON.parse(data.contraindications)) : undefined;
@@ -235,15 +238,14 @@ export const updateMedicine = async (req: Request, res: Response) => {
       include: { images: true }
     });
 
-    if (file) {
-      // If a new file is uploaded, delete old images and add the new one.
+    if (files && files.length > 0) {
       await prisma.medicineImage.deleteMany({ where: { medicineId: Number(id) } });
-      await prisma.medicineImage.create({
-        data: {
+      await prisma.medicineImage.createMany({
+        data: files.map((file, index) => ({
           url: `/uploads/${file.filename}`,
-          isPrimary: true,
+          isPrimary: index === 0,
           medicineId: Number(id)
-        }
+        }))
       });
     }
 
@@ -292,3 +294,18 @@ export const getDashboardStats = async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Error fetching stats' });
   }
 }
+
+export const updateMedicineStock = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { quantityInStock } = req.body;
+  
+  try {
+    const medicine = await prisma.medicine.update({
+      where: { id: Number(id) },
+      data: { quantityInStock: Number(quantityInStock) }
+    });
+    res.json(medicine);
+  } catch (error) {
+    res.status(500).json({ message: 'Error updating stock' });
+  }
+};

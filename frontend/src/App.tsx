@@ -14,6 +14,12 @@ import AdminLogin from './pages/admin/AdminLogin';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminMedicines from './pages/admin/AdminMedicines';
 import AdminCategories from './pages/admin/AdminCategories';
+import AdminManufacturers from './pages/admin/AdminManufacturers';
+import AdminInventory from './pages/admin/AdminInventory';
+import AdminOrders from './pages/admin/AdminOrders';
+import AdminUsers from './pages/admin/AdminUsers';
+import AdminSettings from './pages/admin/AdminSettings';
+
 
 function App() {
   return (
@@ -36,6 +42,11 @@ function App() {
             <Route index element={<AdminDashboard />} />
             <Route path="medicines" element={<AdminMedicines />} />
             <Route path="categories" element={<AdminCategories />} />
+            <Route path="manufacturers" element={<AdminManufacturers />} />
+            <Route path="inventory" element={<AdminInventory />} />
+            <Route path="orders" element={<AdminOrders />} />
+            <Route path="users" element={<AdminUsers />} />
+            <Route path="settings" element={<AdminSettings />} />
           </Route>
 
           <Route path="*" element={<NotFound />} />

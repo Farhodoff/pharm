@@ -30,3 +30,26 @@ export const login = async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+export const updatePassword = async (req: Request, res: Response) => {
+  const adminId = (req as any).admin.id;
+  const { currentPassword, newPassword } = req.body;
+
+  try {
+    const admin = await prisma.admin.findUnique({ where: { id: adminId } });
+    if (!admin) return res.status(404).json({ message: 'Admin not found' });
+
+    const isMatch = await bcrypt.compare(currentPassword, admin.password);
+    if (!isMatch) return res.status(401).json({ message: 'Invalid current password' });
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await prisma.admin.update({
+      where: { id: adminId },
+      data: { password: hashedPassword }
+    });
+
+    res.json({ message: 'Password updated successfully' });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};

@@ -7,6 +7,8 @@ import authRoutes from './routes/authRoutes';
 import medicineRoutes from './routes/medicineRoutes';
 import categoryRoutes from './routes/categoryRoutes';
 import manufacturerRoutes from './routes/manufacturerRoutes';
+import orderRoutes from './routes/orderRoutes';
+import userRoutes from './routes/userRoutes';
 
 const app = express();
 
@@ -20,6 +22,8 @@ app.use('/api/admin', authRoutes);
 app.use('/api/medicines', medicineRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/manufacturers', manufacturerRoutes);
+app.use('/api/orders', orderRoutes);
+app.use('/api/users', userRoutes);
 
 app.get('/', (req, res) => {
   res.send('Pharmacy API is running...');
