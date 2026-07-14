@@ -55,4 +55,4 @@ npm run dev
 
 ## Admin Login
 - **Username:** `admin`
-- **Password:** `admin123`
+- **Password:** `[HIDDEN]`
