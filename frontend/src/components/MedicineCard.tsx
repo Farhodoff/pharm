@@ -20,12 +20,12 @@ export default function MedicineCard({ medicine }: MedicineProps) {
       <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
         {medicine.discountPrice && (
           <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-md shadow-sm">
-            {t('discount')}
+            {t('discountBadge')}
           </span>
         )}
         {medicine.prescriptionRequired && (
           <span className="bg-yellow-500 text-white text-xs font-bold px-2 py-1 rounded-md shadow-sm">
-            {t('prescription')}
+            {t('prescriptionBadge')}
           </span>
         )}
         {medicine.ageLimit && (
@@ -72,7 +72,7 @@ export default function MedicineCard({ medicine }: MedicineProps) {
           <Link
             to={`/medicine/${medicine.id}`}
             className="flex items-center justify-center bg-slate-50 hover:bg-blue-600 text-slate-600 hover:text-white p-2.5 rounded-xl transition-colors"
-            title={t('moreDetails')}
+            title={t('detail')}
           >
             <ExternalLink size={18} />
           </Link>

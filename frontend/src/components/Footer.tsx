@@ -23,18 +23,18 @@ export default function Footer() {
 
         {/* Links */}
         <div>
-          <h3 className="text-lg font-semibold text-slate-800 mb-4">{t('quickLinks')}</h3>
+          <h3 className="text-lg font-semibold text-slate-800 mb-4">{t('footerQuickLinks')}</h3>
           <ul className="space-y-3">
-            <li><Link to="/" className="text-slate-500 hover:text-blue-600 transition-colors">{t('home')}</Link></li>
-            <li><Link to="/search" className="text-slate-500 hover:text-blue-600 transition-colors">{t('allMedicines')}</Link></li>
-            <li><Link to="/search?discount=true" className="text-slate-500 hover:text-blue-600 transition-colors">{t('discountMedicines')}</Link></li>
-            <li><Link to="/search?latest=true" className="text-slate-500 hover:text-blue-600 transition-colors">{t('popularMedicines')}</Link></li>
+            <li><Link to="/" className="text-slate-500 hover:text-blue-600 transition-colors">{t('footerHome')}</Link></li>
+            <li><Link to="/search" className="text-slate-500 hover:text-blue-600 transition-colors">{t('footerAllMedicines')}</Link></li>
+            <li><Link to="/search?discount=true" className="text-slate-500 hover:text-blue-600 transition-colors">{t('footerDiscounts')}</Link></li>
+            <li><Link to="/search?latest=true" className="text-slate-500 hover:text-blue-600 transition-colors">{t('footerNew')}</Link></li>
           </ul>
         </div>
 
         {/* Contact */}
         <div>
-          <h3 className="text-lg font-semibold text-slate-800 mb-4">{t('contact')}</h3>
+          <h3 className="text-lg font-semibold text-slate-800 mb-4">{t('footerContact')}</h3>
           <ul className="space-y-3 text-slate-500">
             <li className="flex items-center space-x-3">
               <Phone size={18} className="text-blue-600" />
@@ -53,7 +53,7 @@ export default function Footer() {
 
         {/* Social */}
         <div>
-          <h3 className="text-lg font-semibold text-slate-800 mb-4">{t('socials')}</h3>
+          <h3 className="text-lg font-semibold text-slate-800 mb-4">{t('footerSocial')}</h3>
           <div className="flex space-x-4">
             <a href="#" className="bg-slate-100 p-3 rounded-full text-slate-600 hover:bg-blue-600 hover:text-white transition-all">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg>
@@ -69,10 +69,10 @@ export default function Footer() {
       </div>
 
       <div className="container mx-auto px-4 border-t border-slate-200 pt-8 flex flex-col md:flex-row items-center justify-between text-slate-500 text-sm">
-        <p>&copy; {new Date().getFullYear()} BIO NEX STAR. {t('rightsReserved')}</p>
+        <p>&copy; {new Date().getFullYear()} BIO NEX STAR. {t('footerRights')}</p>
         <div className="space-x-4 mt-4 md:mt-0">
-          <a href="#" className="hover:text-blue-600">{t('privacyPolicy')}</a>
-          <a href="#" className="hover:text-blue-600">{t('termsOfUse')}</a>
+          <a href="#" className="hover:text-blue-600">{t('footerPrivacy')}</a>
+          <a href="#" className="hover:text-blue-600">{t('footerTerms')}</a>
         </div>
       </div>
     </footer>

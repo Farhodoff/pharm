@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Building2, AlertCircle, ShieldAlert, Tag, Package, Box, Expand } from 'lucide-react';
 import api from '../services/api';
 import { formatPrice } from '../utils/format';
