@@ -1,5 +1,5 @@
-import { useEffect, useState, useRef } from 'react';
-import { Trash2, Plus, X, Edit2, UploadCloud } from 'lucide-react';
+import { useEffect, useState, useRef, useMemo } from 'react';
+import { Trash2, Plus, X, Edit2, UploadCloud, Search as SearchIcon, Pill, Loader2, FileSpreadsheet, Download } from 'lucide-react';
 import api from '../../services/api';
 import { formatPrice } from '../../utils/format';
 import type { Medicine, Category, Manufacturer, MedicineFormData } from '../../types';
@@ -14,12 +14,16 @@ export default function AdminMedicines() {
   const [manufacturers, setManufacturers] = useState<Manufacturer[]>([]);
   const [loading, setLoading] = useState(true);
   
+  const [searchQuery, setSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
   const [currentMedicine, setCurrentMedicine] = useState<Medicine | null>(null);
   const [formData, setFormData] = useState<MedicineFormData>(EMPTY_MEDICINE_FORM);
   const [files, setFiles] = useState<File[]>([]);
   const [activeTab, setActiveTab] = useState<TabType>('basic');
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const excelImportRef = useRef<HTMLInputElement>(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -44,6 +48,44 @@ export default function AdminMedicines() {
     fetchData();
   }, []);
 
+  const handleExcelImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || !e.target.files[0]) return;
+    const file = e.target.files[0];
+    setIsImporting(true);
+    try {
+      const data = new FormData();
+      data.append('file', file);
+      const res = await api.post('/import-export/import', data, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      toast.success(res.data.message || 'Excel muvaffaqiyatli import qilindi');
+      fetchData();
+    } catch (error) {
+      console.error(error);
+      toast.error('Excel importda xatolik yuz berdi');
+    } finally {
+      setIsImporting(false);
+      if (excelImportRef.current) excelImportRef.current.value = '';
+    }
+  };
+
+  const handleExcelExport = async () => {
+    try {
+      const response = await api.get('/import-export/export', { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Dorilar_Baza_${new Date().toISOString().slice(0, 10)}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      toast.success('Excel fayl yuklab olindi');
+    } catch (error) {
+      console.error(error);
+      toast.error('Excel yuklashda xatolik');
+    }
+  };
+
   const openModal = (medicine?: Medicine) => {
     if (medicine) {
       setCurrentMedicine(medicine);
@@ -54,9 +96,12 @@ export default function AdminMedicines() {
         description: medicine.description || '',
         price: medicine.price.toString(),
         discountPrice: medicine.discountPrice?.toString() || '',
+        wholesalePrice: medicine.wholesalePrice?.toString() || '',
         prescriptionRequired: medicine.prescriptionRequired || false,
         ageLimit: medicine.ageLimit || '',
         quantityInStock: medicine.quantityInStock.toString(),
+        batchNumber: medicine.batchNumber || '',
+        expiryDate: medicine.expiryDate ? medicine.expiryDate.slice(0, 10) : '',
         categoryId: medicine.categoryId?.toString() || '',
         manufacturerId: medicine.manufacturerId?.toString() || '',
         pharmacologicalGroup: medicine.details?.pharmacologicalGroup || '',
@@ -160,72 +205,137 @@ export default function AdminMedicines() {
     { id: 'images', label: 'Rasmlar' },
   ];
 
+  // Filter logic
+  const filteredMedicines = useMemo(() => {
+    let result = medicines;
+    if (categoryFilter) {
+      result = result.filter(m => m.categoryId === Number(categoryFilter));
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(m =>
+        m.name.toLowerCase().includes(q) ||
+        (m.internationalName || '').toLowerCase().includes(q) ||
+        (m.category?.name || '').toLowerCase().includes(q) ||
+        (m.manufacturer?.name || '').toLowerCase().includes(q) ||
+        (m.activeSubstance || '').toLowerCase().includes(q)
+      );
+    }
+    return result;
+  }, [medicines, searchQuery, categoryFilter]);
+
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-      <div className="p-6 border-b border-slate-200 bg-slate-50/50 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <h3 className="text-lg font-bold text-slate-800">Dorilar boshqaruvi</h3>
-        <button 
-          onClick={() => openModal()}
-          className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors shrink-0"
-        >
-          <Plus size={18} />
-          <span>Yangi dori qo'shish</span>
-        </button>
+    <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+      <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="bg-blue-100 p-2.5 rounded-xl">
+            <Pill size={20} className="text-blue-600" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-slate-800">Dorilar boshqaruvi</h3>
+            <p className="text-xs text-slate-500">{medicines.length} ta dori</p>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <input
+            type="file"
+            ref={excelImportRef}
+            onChange={handleExcelImport}
+            accept=".xlsx, .xls, .csv"
+            className="hidden"
+          />
+          <button
+            onClick={() => excelImportRef.current?.click()}
+            disabled={isImporting}
+            className="flex items-center space-x-2 bg-emerald-50 text-emerald-700 border border-emerald-200 px-4 py-2.5 rounded-xl font-medium hover:bg-emerald-100 transition-all shrink-0 text-sm"
+            title="Excel fayl orqali ommaviy dorilarni yuklash"
+          >
+            {isImporting ? <Loader2 size={18} className="animate-spin" /> : <FileSpreadsheet size={18} />}
+            <span>Excel Import</span>
+          </button>
+
+          <button
+            onClick={handleExcelExport}
+            className="flex items-center space-x-2 bg-slate-100 text-slate-700 border border-slate-200 px-4 py-2.5 rounded-xl font-medium hover:bg-slate-200 transition-all shrink-0 text-sm"
+            title="Barcha dorilarni Excel shaklida yuklab olish"
+          >
+            <Download size={18} />
+            <span>Excel Export</span>
+          </button>
+
+          <button onClick={() => openModal()}
+            className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2.5 rounded-xl font-medium hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 shrink-0 text-sm">
+            <Plus size={18} /><span>Yangi dori qo'shish</span>
+          </button>
+        </div>
       </div>
 
-      <div className="p-0 overflow-x-auto">
+      {/* Search & Filter */}
+      <div className="px-6 py-3 border-b border-slate-50 flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <SearchIcon size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input type="text" placeholder="Dori nomi, modda, kategoriya yoki ishlab chiqaruvchi..."
+            value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm transition-all" />
+        </div>
+        <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}
+          className="border border-slate-200 rounded-xl px-4 py-2.5 bg-slate-50 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500">
+          <option value="">Barcha kategoriyalar</option>
+          {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+      </div>
+
+      <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="bg-slate-50 border-b border-slate-200">
-              <th className="p-4 text-sm font-semibold text-slate-600">Nomi</th>
-              <th className="p-4 text-sm font-semibold text-slate-600">Kategoriya</th>
-              <th className="p-4 text-sm font-semibold text-slate-600">Ishlab chiqaruvchi</th>
-              <th className="p-4 text-sm font-semibold text-slate-600">Narxi</th>
-              <th className="p-4 text-sm font-semibold text-slate-600 text-right">Amallar</th>
+            <tr className="bg-slate-50/80">
+              <th className="p-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Dori nomi</th>
+              <th className="p-4 text-xs font-semibold text-slate-500 uppercase tracking-wider hidden md:table-cell">Kategoriya</th>
+              <th className="p-4 text-xs font-semibold text-slate-500 uppercase tracking-wider hidden lg:table-cell">Ishlab chiq.</th>
+              <th className="p-4 text-xs font-semibold text-slate-500 uppercase tracking-wider">Narxi</th>
+              <th className="p-4 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Amallar</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr>
-                <td colSpan={5} className="p-4 text-center text-slate-500">Yuklanmoqda...</td>
-              </tr>
-            ) : medicines.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="p-4 text-center text-slate-500">Dorilar yo'q</td>
-              </tr>
+              <tr><td colSpan={5} className="p-12 text-center text-slate-400"><Loader2 size={20} className="animate-spin mx-auto mb-2" />Yuklanmoqda...</td></tr>
+            ) : filteredMedicines.length === 0 ? (
+              <tr><td colSpan={5} className="p-12 text-center">
+                <Pill size={32} className="mx-auto mb-2 text-slate-300" />
+                <p className="text-slate-500 font-medium">
+                  {searchQuery || categoryFilter ? 'Qidiruv bo\'yicha dori topilmadi' : 'Dorilar yo\'q'}
+                </p>
+              </td></tr>
             ) : (
-              medicines.map((med) => (
-                <tr key={med.id} className="border-b border-slate-100 hover:bg-slate-50/50 transition-colors">
+              filteredMedicines.map((med) => (
+                <tr key={med.id} className="border-b border-slate-50 hover:bg-blue-50/30 transition-colors group">
                   <td className="p-4">
                     <div className="flex items-center space-x-3">
-                      <img 
-                        src={getImageUrl(med.images?.[0]?.url)} 
-                        alt="" 
-                        className="w-10 h-10 object-cover rounded-lg bg-slate-100"
-                      />
-                      <div>
-                        <div className="font-medium text-slate-800">{med.name}</div>
-                        <div className="text-xs text-slate-500">{med.internationalName}</div>
+                      <img src={getImageUrl(med.images?.[0]?.url)} alt="" className="w-10 h-10 object-cover rounded-lg bg-slate-100 shrink-0" />
+                      <div className="min-w-0">
+                        <div className="font-medium text-slate-800 text-sm truncate">{med.name}</div>
+                        <div className="text-xs text-slate-400 truncate">{med.internationalName || med.activeSubstance}</div>
                       </div>
                     </div>
                   </td>
-                  <td className="p-4 text-slate-600">{med.category?.name}</td>
-                  <td className="p-4 text-slate-600">{med.manufacturer?.name}</td>
-                  <td className="p-4 font-medium text-slate-800">{formatPrice(med.price)}</td>
-                  <td className="p-4 text-right space-x-2 whitespace-nowrap">
-                    <button 
-                      onClick={() => openModal(med)}
-                      className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors inline-block"
-                      title="Tahrirlash"
-                    >
-                      <Edit2 size={18} />
+                  <td className="p-4 text-sm text-slate-600 hidden md:table-cell">
+                    {med.category ? (
+                      <span className="bg-slate-100 px-2.5 py-1 rounded-lg text-xs font-medium">{med.category.name}</span>
+                    ) : '-'}
+                  </td>
+                  <td className="p-4 text-sm text-slate-500 hidden lg:table-cell">{med.manufacturer?.name || '-'}</td>
+                  <td className="p-4">
+                    <span className="font-semibold text-slate-800">{formatPrice(med.price)}</span>
+                    {med.discountPrice && (
+                      <span className="ml-1 text-xs text-red-500 bg-red-50 px-1.5 py-0.5 rounded-full">-{Math.round((1 - med.discountPrice/med.price) * 100)}%</span>
+                    )}
+                  </td>
+                  <td className="p-4 text-right space-x-1 whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => openModal(med)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors inline-block" title="Tahrirlash">
+                      <Edit2 size={16} />
                     </button>
-                    <button 
-                      onClick={() => handleDelete(med.id)}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors inline-block"
-                      title="O'chirish"
-                    >
-                      <Trash2 size={18} />
+                    <button onClick={() => handleDelete(med.id)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors inline-block" title="O'chirish">
+                      <Trash2 size={16} />
                     </button>
                   </td>
                 </tr>
@@ -303,6 +413,22 @@ export default function AdminMedicines() {
                       <div>
                         <label className="block text-sm font-medium text-slate-700 mb-1">Chegirma narx (ixtiyoriy)</label>
                         <input type="number" name="discountPrice" value={formData.discountPrice} onChange={handleInputChange} className="w-full border border-slate-200 rounded-xl p-3 bg-slate-50 focus:border-blue-500" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Ulgurji narx (B2B)</label>
+                        <input type="number" name="wholesalePrice" value={formData.wholesalePrice} onChange={handleInputChange} placeholder="B2B narx" className="w-full border border-slate-200 rounded-xl p-3 bg-slate-50 focus:border-blue-500" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Ombordagi soni (dona) *</label>
+                        <input type="number" name="quantityInStock" value={formData.quantityInStock} onChange={handleInputChange} min="0" placeholder="0" className="w-full border border-slate-200 rounded-xl p-3 bg-slate-50 focus:border-blue-500" required />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Partiya raqami (Batch)</label>
+                        <input type="text" name="batchNumber" value={formData.batchNumber} onChange={handleInputChange} placeholder="B-2026-01" className="w-full border border-slate-200 rounded-xl p-3 bg-slate-50 focus:border-blue-500" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Yaroqlilik muddati (Expiry)</label>
+                        <input type="date" name="expiryDate" value={formData.expiryDate} onChange={handleInputChange} className="w-full border border-slate-200 rounded-xl p-3 bg-slate-50 focus:border-blue-500" />
                       </div>
                       <div className="flex items-center space-x-2 mt-6">
                         <input type="checkbox" name="prescriptionRequired" checked={formData.prescriptionRequired} onChange={handleInputChange} className="w-5 h-5 text-blue-600 rounded" />

@@ -4,6 +4,7 @@ import { Search as SearchIcon, ArrowRight, ShieldCheck, Truck, Clock } from 'luc
 import api from '../services/api';
 import MedicineCard from '../components/MedicineCard';
 import { useSearchStore } from '../store/useSearchStore';
+import { useTranslation } from '../utils/translations';
 
 export default function Home() {
   const [categories, setCategories] = useState([]);
@@ -12,6 +13,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const { searchQuery, setSearchQuery } = useSearchStore();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -46,19 +48,19 @@ export default function Home() {
   };
 
   return (
-    <div className="pt-16">
+    <div className="pt-24">
       {/* Hero Section */}
       <section className="relative bg-gradient-to-br from-blue-900 to-slate-900 text-white py-16 md:py-24 overflow-hidden">
         <div className="absolute inset-0 z-0 opacity-20 bg-[url('https://images.unsplash.com/photo-1587854692152-cbe660dbde88?q=80&w=2000')] bg-cover bg-center mix-blend-overlay"></div>
         <div className="container mx-auto px-4 relative z-10 flex flex-col items-center text-center">
           <span className="bg-blue-600/30 text-blue-200 border border-blue-500/30 px-3 py-1 md:px-4 md:py-1.5 rounded-full text-xs md:text-sm font-semibold mb-6 backdrop-blur-sm">
-            #1 Farmasevtika Ma'lumotnomasi
+            {t('heroTag')}
           </span>
-          <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold mb-4 md:mb-6 leading-tight">
-            Sifatli farmasevtika <br className="hidden md:block"/> mahsulotlari
+          <h1 className="text-3xl sm:text-4xl md:text-6xl font-bold mb-4 md:mb-6 leading-tight whitespace-pre-line">
+            {t('heroTitle')}
           </h1>
           <p className="text-base sm:text-lg md:text-xl text-blue-100 mb-8 md:mb-10 max-w-2xl px-2">
-            Kerakli dorini tez va oson toping. Barcha ma'lumotlar ishonchli manbalardan.
+            {t('heroSubtitle')}
           </p>
           
           <form onSubmit={handleSearch} className="w-full max-w-2xl relative flex flex-col sm:flex-row items-center bg-transparent sm:bg-white rounded-2xl sm:rounded-full p-0 sm:p-2 shadow-none sm:shadow-2xl gap-2 sm:gap-0">
@@ -67,14 +69,14 @@ export default function Home() {
               <SearchIcon className="text-slate-400 ml-2 sm:hidden" size={20} />
               <input 
                 type="text" 
-                placeholder="Dori nomi, kasallik yoki modda..." 
+                placeholder={t('searchPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="flex-grow px-3 sm:px-4 py-2 sm:py-3 text-slate-800 bg-transparent focus:outline-none text-base sm:text-lg w-full"
               />
             </div>
             <button type="submit" className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-6 sm:px-8 py-3 sm:py-3 rounded-full font-medium transition-colors mt-2 sm:mt-0">
-              Qidirish
+              {t('searchBtn')}
             </button>
           </form>
         </div>
@@ -88,8 +90,8 @@ export default function Home() {
               <ShieldCheck size={28} />
             </div>
             <div>
-              <h3 className="font-bold text-slate-800 text-lg mb-1">Ishonchli ma'lumot</h3>
-              <p className="text-slate-500 text-sm">Barcha dorilar rasmiy tasdiqlangan.</p>
+              <h3 className="font-bold text-slate-800 text-lg mb-1">{t('reliableInfo')}</h3>
+              <p className="text-slate-500 text-sm">{t('reliableInfoDesc')}</p>
             </div>
           </div>
           <div className="flex items-start space-x-4 p-6 rounded-2xl bg-slate-50 border border-slate-100">
@@ -97,8 +99,8 @@ export default function Home() {
               <Truck size={28} />
             </div>
             <div>
-              <h3 className="font-bold text-slate-800 text-lg mb-1">Dorixonalarda mavjud</h3>
-              <p className="text-slate-500 text-sm">Respublikamizdagi yirik dorixonalarda.</p>
+              <h3 className="font-bold text-slate-800 text-lg mb-1">{t('availableInPharmacies')}</h3>
+              <p className="text-slate-500 text-sm">{t('availableInPharmaciesDesc')}</p>
             </div>
           </div>
           <div className="flex items-start space-x-4 p-6 rounded-2xl bg-slate-50 border border-slate-100">
@@ -106,8 +108,8 @@ export default function Home() {
               <Clock size={28} />
             </div>
             <div>
-              <h3 className="font-bold text-slate-800 text-lg mb-1">Tezkor izlash</h3>
-              <p className="text-slate-500 text-sm">Vaqtingizni tejab, keraklisini toping.</p>
+              <h3 className="font-bold text-slate-800 text-lg mb-1">{t('quickSearch')}</h3>
+              <p className="text-slate-500 text-sm">{t('quickSearchDesc')}</p>
             </div>
           </div>
         </div>
@@ -117,11 +119,11 @@ export default function Home() {
       <section className="py-16 container mx-auto px-4">
         <div className="flex items-end justify-between mb-10">
           <div>
-            <h2 className="text-3xl font-bold text-slate-800 mb-2">Kategoriyalar</h2>
-            <p className="text-slate-500">O'zingizga kerakli bo'limni tanlang</p>
+            <h2 className="text-3xl font-bold text-slate-800 mb-2">{t('categories')}</h2>
+            <p className="text-slate-500">{t('categoriesDesc')}</p>
           </div>
           <Link to="/search" className="hidden md:flex items-center space-x-2 text-blue-600 font-medium hover:underline">
-            <span>Barchasini ko'rish</span>
+            <span>{t('viewAll')}</span>
             <ArrowRight size={18} />
           </Link>
         </div>
@@ -155,11 +157,11 @@ export default function Home() {
         <div className="container mx-auto px-4">
           <div className="flex items-end justify-between mb-10">
             <div>
-              <h2 className="text-3xl font-bold text-slate-800 mb-2">Mashhur Dorilar</h2>
-              <p className="text-slate-500">Eng ko'p izlangan mahsulotlar</p>
+              <h2 className="text-3xl font-bold text-slate-800 mb-2">{t('popularMedicines')}</h2>
+              <p className="text-slate-500">{t('popularMedicinesDesc')}</p>
             </div>
             <Link to="/search" className="flex items-center space-x-2 text-blue-600 font-medium hover:underline">
-              <span>Barchasini ko'rish</span>
+              <span>{t('viewAll')}</span>
               <ArrowRight size={18} />
             </Link>
           </div>
@@ -183,11 +185,11 @@ export default function Home() {
         <section className="py-16 container mx-auto px-4">
           <div className="flex items-end justify-between mb-10">
             <div>
-              <h2 className="text-3xl font-bold text-slate-800 mb-2">Chegirmadagi dorilar</h2>
-              <p className="text-slate-500">Maxsus narxdagi takliflar</p>
+              <h2 className="text-3xl font-bold text-slate-800 mb-2">{t('discountMedicines')}</h2>
+              <p className="text-slate-500">{t('discountMedicinesDesc')}</p>
             </div>
             <Link to="/search?discount=true" className="flex items-center space-x-2 text-blue-600 font-medium hover:underline">
-              <span>Barchasini ko'rish</span>
+              <span>{t('viewAll')}</span>
               <ArrowRight size={18} />
             </Link>
           </div>

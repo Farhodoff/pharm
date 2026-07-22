@@ -1,7 +1,10 @@
 import { Pill, Phone, Mail, MapPin } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from '../utils/translations';
 
 export default function Footer() {
+  const { t } = useTranslation();
+
   return (
     <footer className="bg-white border-t border-slate-200 pt-16 pb-8">
       <div className="container mx-auto px-4 grid grid-cols-1 md:grid-cols-4 gap-8 mb-12">
@@ -14,24 +17,24 @@ export default function Footer() {
             <span className="text-2xl font-bold text-slate-800 tracking-tight">BIO NEX <span className="text-blue-600">STAR</span></span>
           </Link>
           <p className="text-slate-500 mt-4 leading-relaxed">
-            Eng ishonchli va sifatli farmasevtika mahsulotlari haqida to'liq ma'lumotlar bazasi. Sog'ligingiz o'z qo'lingizda.
+            {t('footerDesc')}
           </p>
         </div>
 
         {/* Links */}
         <div>
-          <h3 className="text-lg font-semibold text-slate-800 mb-4">Tezkor havolalar</h3>
+          <h3 className="text-lg font-semibold text-slate-800 mb-4">{t('quickLinks')}</h3>
           <ul className="space-y-3">
-            <li><Link to="/" className="text-slate-500 hover:text-blue-600 transition-colors">Bosh sahifa</Link></li>
-            <li><Link to="/search" className="text-slate-500 hover:text-blue-600 transition-colors">Barcha dorilar</Link></li>
-            <li><Link to="/search?discount=true" className="text-slate-500 hover:text-blue-600 transition-colors">Chegirmalar</Link></li>
-            <li><Link to="/search?latest=true" className="text-slate-500 hover:text-blue-600 transition-colors">Yangi kelganlar</Link></li>
+            <li><Link to="/" className="text-slate-500 hover:text-blue-600 transition-colors">{t('home')}</Link></li>
+            <li><Link to="/search" className="text-slate-500 hover:text-blue-600 transition-colors">{t('allMedicines')}</Link></li>
+            <li><Link to="/search?discount=true" className="text-slate-500 hover:text-blue-600 transition-colors">{t('discountMedicines')}</Link></li>
+            <li><Link to="/search?latest=true" className="text-slate-500 hover:text-blue-600 transition-colors">{t('popularMedicines')}</Link></li>
           </ul>
         </div>
 
         {/* Contact */}
         <div>
-          <h3 className="text-lg font-semibold text-slate-800 mb-4">Bog'lanish</h3>
+          <h3 className="text-lg font-semibold text-slate-800 mb-4">{t('contact')}</h3>
           <ul className="space-y-3 text-slate-500">
             <li className="flex items-center space-x-3">
               <Phone size={18} className="text-blue-600" />
@@ -43,14 +46,14 @@ export default function Footer() {
             </li>
             <li className="flex items-start space-x-3">
               <MapPin size={18} className="text-blue-600 mt-1 shrink-0" />
-              <span>Toshkent shahar, Yunusobod tumani, Amir Temur ko'chasi 108-uy</span>
+              <span>{t('address')}</span>
             </li>
           </ul>
         </div>
 
         {/* Social */}
         <div>
-          <h3 className="text-lg font-semibold text-slate-800 mb-4">Ijtimoiy tarmoqlar</h3>
+          <h3 className="text-lg font-semibold text-slate-800 mb-4">{t('socials')}</h3>
           <div className="flex space-x-4">
             <a href="#" className="bg-slate-100 p-3 rounded-full text-slate-600 hover:bg-blue-600 hover:text-white transition-all">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg>
@@ -66,10 +69,10 @@ export default function Footer() {
       </div>
 
       <div className="container mx-auto px-4 border-t border-slate-200 pt-8 flex flex-col md:flex-row items-center justify-between text-slate-500 text-sm">
-        <p>&copy; {new Date().getFullYear()} BIO NEX STAR. Barcha huquqlar himoyalangan.</p>
+        <p>&copy; {new Date().getFullYear()} BIO NEX STAR. {t('rightsReserved')}</p>
         <div className="space-x-4 mt-4 md:mt-0">
-          <a href="#" className="hover:text-blue-600">Maxfiylik siyosati</a>
-          <a href="#" className="hover:text-blue-600">Foydalanish shartlari</a>
+          <a href="#" className="hover:text-blue-600">{t('privacyPolicy')}</a>
+          <a href="#" className="hover:text-blue-600">{t('termsOfUse')}</a>
         </div>
       </div>
     </footer>

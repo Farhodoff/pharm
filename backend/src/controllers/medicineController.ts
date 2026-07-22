@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { prisma } from '../lib/prisma';
+import { createAuditLog } from '../utils/auditLogger';
 
 export const getMedicines = async (req: Request, res: Response) => {
   try {
@@ -83,14 +84,67 @@ export const getMedicineById = async (req: Request, res: Response) => {
   }
 };
 
+export const getMedicineAnalogs = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  try {
+    const medicine = await prisma.medicine.findUnique({
+      where: { id: Number(id) },
+      select: { id: true, activeSubstance: true, name: true },
+    });
+
+    if (!medicine || !medicine.activeSubstance) {
+      res.json({ data: [] });
+      return;
+    }
+
+    const analogs = await prisma.medicine.findMany({
+      where: {
+        activeSubstance: { contains: medicine.activeSubstance },
+        id: { not: Number(id) },
+      },
+      include: { category: true, manufacturer: true, images: { where: { isPrimary: true }, take: 1 } },
+      take: 8,
+    });
+
+    res.json({ data: analogs });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error fetching medicine analogs' });
+  }
+};
+
+export const getExpiryAlerts = async (_req: Request, res: Response) => {
+  try {
+    const ninetyDaysFromNow = new Date();
+    ninetyDaysFromNow.setDate(ninetyDaysFromNow.getDate() + 90);
+
+    const expiringMedicines = await prisma.medicine.findMany({
+      where: {
+        expiryDate: {
+          not: null,
+          lte: ninetyDaysFromNow,
+        },
+      },
+      include: { category: true, manufacturer: true },
+      orderBy: { expiryDate: 'asc' },
+    });
+
+    res.json({ data: expiringMedicines });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error fetching expiry alerts' });
+  }
+};
+
 export const createMedicine = async (req: Request, res: Response) => {
   try {
     const data = req.body;
     const files = req.files as Express.Multer.File[];
 
-    // Parse nested objects if sent as strings (FormData from frontend)
     const sideEffects = data.sideEffects ? JSON.stringify(JSON.parse(data.sideEffects)) : undefined;
     const contraindications = data.contraindications ? JSON.stringify(JSON.parse(data.contraindications)) : undefined;
+
+    const expiryDate = data.expiryDate ? new Date(data.expiryDate) : null;
 
     const medicine = await prisma.medicine.create({
       data: {
@@ -100,11 +154,14 @@ export const createMedicine = async (req: Request, res: Response) => {
         description: data.description,
         price: Number(data.price),
         discountPrice: data.discountPrice ? Number(data.discountPrice) : null,
+        wholesalePrice: data.wholesalePrice ? Number(data.wholesalePrice) : null,
         prescriptionRequired: data.prescriptionRequired === 'true' || data.prescriptionRequired === true,
         ageLimit: data.ageLimit,
         quantityInStock: Number(data.quantityInStock || 0),
-        categoryId: Number(data.categoryId),
-        manufacturerId: Number(data.manufacturerId),
+        batchNumber: data.batchNumber || null,
+        expiryDate: expiryDate && !isNaN(expiryDate.getTime()) ? expiryDate : null,
+        categoryId: data.categoryId ? Number(data.categoryId) : null,
+        manufacturerId: data.manufacturerId ? Number(data.manufacturerId) : null,
         
         details: {
           create: {
@@ -147,6 +204,9 @@ export const createMedicine = async (req: Request, res: Response) => {
       include: { images: true }
     });
 
+    const adminUser = (req as any).user?.username || 'Admin';
+    await createAuditLog(adminUser, 'CREATE_MEDICINE', { id: medicine.id, name: medicine.name, price: medicine.price });
+
     res.status(201).json(medicine);
   } catch (error) {
     console.error(error);
@@ -163,6 +223,8 @@ export const updateMedicine = async (req: Request, res: Response) => {
     const sideEffects = data.sideEffects ? JSON.stringify(JSON.parse(data.sideEffects)) : undefined;
     const contraindications = data.contraindications ? JSON.stringify(JSON.parse(data.contraindications)) : undefined;
 
+    const expiryDate = data.expiryDate ? new Date(data.expiryDate) : null;
+
     const updateData: any = {
       name: data.name,
       internationalName: data.internationalName,
@@ -170,16 +232,15 @@ export const updateMedicine = async (req: Request, res: Response) => {
       description: data.description,
       price: data.price ? Number(data.price) : undefined,
       discountPrice: data.discountPrice ? Number(data.discountPrice) : null,
+      wholesalePrice: data.wholesalePrice ? Number(data.wholesalePrice) : null,
       prescriptionRequired: data.prescriptionRequired === 'true' || data.prescriptionRequired === true,
       ageLimit: data.ageLimit,
-      quantityInStock: data.quantityInStock ? Number(data.quantityInStock) : 0,
+      quantityInStock: data.quantityInStock !== undefined ? Number(data.quantityInStock) : undefined,
+      batchNumber: data.batchNumber !== undefined ? (data.batchNumber || null) : undefined,
+      expiryDate: expiryDate && !isNaN(expiryDate.getTime()) ? expiryDate : null,
       categoryId: data.categoryId ? Number(data.categoryId) : undefined,
       manufacturerId: data.manufacturerId ? Number(data.manufacturerId) : undefined,
     };
-
-    // Note: for a robust solution, we should update nested relations properly.
-    // Since Prisma update with nested create/update can be tricky if they don't exist,
-    // we use upsert for relations.
 
     const medicine = await prisma.medicine.update({
       where: { id: Number(id) },
@@ -262,6 +323,9 @@ export const updateMedicine = async (req: Request, res: Response) => {
       });
     }
 
+    const adminUser = (req as any).user?.username || 'Admin';
+    await createAuditLog(adminUser, 'UPDATE_MEDICINE', { id: medicine.id, name: medicine.name, price: medicine.price });
+
     res.json(medicine);
   } catch (error) {
     console.error(error);
@@ -272,9 +336,14 @@ export const updateMedicine = async (req: Request, res: Response) => {
 export const deleteMedicine = async (req: Request, res: Response) => {
   const { id } = req.params;
   try {
+    const existing = await prisma.medicine.findUnique({ where: { id: Number(id) }, select: { name: true } });
     await prisma.medicine.delete({
       where: { id: Number(id) },
     });
+
+    const adminUser = (req as any).user?.username || 'Admin';
+    await createAuditLog(adminUser, 'DELETE_MEDICINE', { id: Number(id), name: existing?.name });
+
     res.json({ message: 'Medicine deleted' });
   } catch (error) {
     res.status(500).json({ message: 'Error deleting medicine' });
@@ -287,6 +356,12 @@ export const getDashboardStats = async (req: Request, res: Response) => {
     const totalCategories = await prisma.category.count();
     const lowStockMedicines = await prisma.medicine.count({
       where: { quantityInStock: { lt: 10 } }
+    });
+
+    const ninetyDaysFromNow = new Date();
+    ninetyDaysFromNow.setDate(ninetyDaysFromNow.getDate() + 90);
+    const expiringMedicinesCount = await prisma.medicine.count({
+      where: { expiryDate: { lte: ninetyDaysFromNow, not: null } }
     });
     
     const categoryStats = await prisma.category.findMany({
@@ -301,6 +376,7 @@ export const getDashboardStats = async (req: Request, res: Response) => {
       totalMedicines,
       totalCategories,
       lowStockMedicines,
+      expiringMedicinesCount,
       categoryStats
     });
   } catch (error) {
@@ -317,8 +393,134 @@ export const updateMedicineStock = async (req: Request, res: Response) => {
       where: { id: Number(id) },
       data: { quantityInStock: Number(quantityInStock) }
     });
+
+    const adminUser = (req as any).user?.username || 'Admin';
+    await createAuditLog(adminUser, 'UPDATE_STOCK', { id: medicine.id, name: medicine.name, newStock: medicine.quantityInStock });
+
     res.json(medicine);
   } catch (error) {
     res.status(500).json({ message: 'Error updating stock' });
+  }
+};
+
+// ===== Search Suggestions =====
+
+export const getSearchSuggestions = async (req: Request, res: Response) => {
+  const { q } = req.query;
+  
+  if (!q || String(q).length < 2) {
+    res.json({ suggestions: [] });
+    return;
+  }
+
+  try {
+    const query = String(q);
+    
+    const [medicines, categories, manufacturers] = await Promise.all([
+      prisma.medicine.findMany({
+        where: {
+          OR: [
+            { name: { contains: query } },
+            { internationalName: { contains: query } },
+            { activeSubstance: { contains: query } },
+          ],
+        },
+        select: {
+          id: true,
+          name: true,
+          internationalName: true,
+          activeSubstance: true,
+          price: true,
+          discountPrice: true,
+          images: { where: { isPrimary: true }, take: 1, select: { url: true } },
+        },
+        take: 8,
+      }),
+      prisma.category.findMany({
+        where: { name: { contains: query } },
+        select: { id: true, name: true },
+        take: 3,
+      }),
+      prisma.manufacturer.findMany({
+        where: { name: { contains: query } },
+        select: { id: true, name: true },
+        take: 3,
+      }),
+    ]);
+
+    res.json({
+      suggestions: {
+        medicines: medicines.map(m => ({
+          id: m.id,
+          name: m.name,
+          internationalName: m.internationalName,
+          activeSubstance: m.activeSubstance,
+          price: m.price,
+          discountPrice: m.discountPrice,
+          image: m.images[0]?.url || null,
+          type: 'medicine' as const,
+        })),
+        categories: categories.map(c => ({
+          id: c.id,
+          name: c.name,
+          type: 'category' as const,
+        })),
+        manufacturers: manufacturers.map(m => ({
+          id: m.id,
+          name: m.name,
+          type: 'manufacturer' as const,
+        })),
+      }
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error fetching suggestions' });
+  }
+};
+
+export const getPopularSearches = async (_req: Request, res: Response) => {
+  try {
+    const popular = await prisma.searchLog.findMany({
+      orderBy: { count: 'desc' },
+      take: 10,
+      select: { query: true, count: true },
+    });
+    res.json({ popularSearches: popular });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error fetching popular searches' });
+  }
+};
+
+export const logSearch = async (req: Request, res: Response) => {
+  const { query } = req.body;
+  
+  if (!query || !String(query).trim()) {
+    res.status(400).json({ message: 'Query is required' });
+    return;
+  }
+
+  try {
+    const q = String(query).trim().toLowerCase();
+    
+    const existing = await prisma.searchLog.findFirst({
+      where: { query: q },
+    });
+
+    if (existing) {
+      await prisma.searchLog.update({
+        where: { id: existing.id },
+        data: { count: { increment: 1 } },
+      });
+    } else {
+      await prisma.searchLog.create({
+        data: { query: q },
+      });
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error logging search' });
   }
 };

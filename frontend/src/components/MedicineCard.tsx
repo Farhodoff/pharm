@@ -3,6 +3,7 @@ import { Tag, Building2, ExternalLink } from 'lucide-react';
 import { formatPrice } from '../utils/format';
 import type { Medicine } from '../types';
 import { getImageUrl } from '../types';
+import { useTranslation } from '../utils/translations';
 
 interface MedicineProps {
   medicine: Medicine;
@@ -11,6 +12,7 @@ interface MedicineProps {
 export default function MedicineCard({ medicine }: MedicineProps) {
   const primaryImage = medicine.images?.find((img) => img.isPrimary)?.url;
   const imageUrl = getImageUrl(primaryImage);
+  const { t } = useTranslation();
 
   return (
     <div className="bg-white rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 border border-slate-100 overflow-hidden group flex flex-col h-full relative">
@@ -18,12 +20,12 @@ export default function MedicineCard({ medicine }: MedicineProps) {
       <div className="absolute top-4 left-4 z-10 flex flex-col gap-2">
         {medicine.discountPrice && (
           <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-md shadow-sm">
-            CHEGIRMA
+            {t('discount')}
           </span>
         )}
         {medicine.prescriptionRequired && (
           <span className="bg-yellow-500 text-white text-xs font-bold px-2 py-1 rounded-md shadow-sm">
-            RETSEPT
+            {t('prescription')}
           </span>
         )}
         {medicine.ageLimit && (
@@ -46,7 +48,7 @@ export default function MedicineCard({ medicine }: MedicineProps) {
       <div className="p-5 flex flex-col flex-grow">
         <div className="flex items-center space-x-2 text-xs text-slate-500 mb-2">
           <Tag size={12} />
-          <span>{medicine.category?.name || 'Kategoriya'}</span>
+          <span>{medicine.category?.name || t('category')}</span>
         </div>
         
         <h3 className="text-lg font-bold text-slate-800 mb-1 group-hover:text-blue-600 transition-colors line-clamp-1">
@@ -70,7 +72,7 @@ export default function MedicineCard({ medicine }: MedicineProps) {
           <Link
             to={`/medicine/${medicine.id}`}
             className="flex items-center justify-center bg-slate-50 hover:bg-blue-600 text-slate-600 hover:text-white p-2.5 rounded-xl transition-colors"
-            title="Batafsil"
+            title={t('moreDetails')}
           >
             <ExternalLink size={18} />
           </Link>

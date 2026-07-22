@@ -39,9 +39,12 @@ model Medicine {
   description          String?
   price                Float
   discountPrice        Float?
+  wholesalePrice       Float?
   prescriptionRequired Boolean                   @default(false)
   ageLimit             String?
   quantityInStock      Int                       @default(0)
+  batchNumber          String?
+  expiryDate           DateTime?
   
   category             Category?                 @relation(fields: [categoryId], references: [id])
   categoryId           Int?
@@ -115,13 +118,16 @@ model MedicineImage {
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
-  name      String
-  phone     String   @unique
-  password  String
-  address   String?
-  orders    Order[]
-  createdAt DateTime @default(now())
+  id          Int      @id @default(autoincrement())
+  name        String
+  phone       String   @unique
+  password    String
+  address     String?
+  role        String   @default("USER") // USER, B2B_PARTNER
+  companyName String?
+  tin         String?
+  orders      Order[]
+  createdAt   DateTime @default(now())
 }
 
 model Order {
@@ -143,4 +149,35 @@ model OrderItem {
   medicineId Int
   quantity   Int
   price      Float
+}
+
+model SearchLog {
+  id        Int      @id @default(autoincrement())
+  query     String
+  count     Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  adminId   Int?
+  username  String
+  action    String
+  details   String
+  createdAt DateTime @default(now())
+}
+
+model Article {
+  id          Int      @id @default(autoincrement())
+  title       String
+  slug        String   @unique
+  excerpt     String
+  content     String
+  image       String?
+  author      String   @default("BIO NEX STAR Farmatsevt")
+  published   Boolean  @default(true)
+  views       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

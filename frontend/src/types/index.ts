@@ -70,9 +70,12 @@ export interface Medicine {
   description?: string;
   price: number;
   discountPrice?: number | null;
+  wholesalePrice?: number | null;
   prescriptionRequired: boolean;
   ageLimit?: string;
   quantityInStock: number;
+  batchNumber?: string;
+  expiryDate?: string;
   categoryId?: number;
   manufacturerId?: number;
   category?: Category;
@@ -87,6 +90,29 @@ export interface Medicine {
   updatedAt: string;
 }
 
+export interface AuditLog {
+  id: number;
+  adminId?: number;
+  username: string;
+  action: string;
+  details: string;
+  createdAt: string;
+}
+
+export interface Article {
+  id: number;
+  title: string;
+  slug: string;
+  excerpt: string;
+  content: string;
+  image?: string;
+  author: string;
+  published: boolean;
+  views: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // ===== Form Types =====
 
 export interface MedicineFormData {
@@ -96,9 +122,12 @@ export interface MedicineFormData {
   description: string;
   price: string;
   discountPrice: string;
+  wholesalePrice: string;
   prescriptionRequired: boolean;
   ageLimit: string;
   quantityInStock: string;
+  batchNumber: string;
+  expiryDate: string;
   categoryId: string;
   manufacturerId: string;
   pharmacologicalGroup: string;
@@ -120,8 +149,8 @@ export interface MedicineFormData {
 
 export const EMPTY_MEDICINE_FORM: MedicineFormData = {
   name: '', internationalName: '', activeSubstance: '', description: '',
-  price: '', discountPrice: '', prescriptionRequired: false, ageLimit: '',
-  quantityInStock: '', categoryId: '', manufacturerId: '',
+  price: '', discountPrice: '', wholesalePrice: '', prescriptionRequired: false, ageLimit: '',
+  quantityInStock: '', batchNumber: '', expiryDate: '', categoryId: '', manufacturerId: '',
   pharmacologicalGroup: '', packageType: '', packageSize: '',
   usageAreas: '', adultDosage: '', childDosage: '', howToUse: '',
   timesPerDay: '', beforeOrAfterMeal: '',
@@ -135,6 +164,7 @@ export interface DashboardStats {
   totalMedicines: number;
   totalCategories: number;
   lowStockMedicines: number;
+  expiringMedicinesCount?: number;
   categoryStats: Category[];
 }
 
@@ -143,7 +173,7 @@ export interface DashboardStats {
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
 
 export function getImageUrl(path?: string): string {
-  if (!path) return '/placeholder-pill.png';
+  if (!path) return '/placeholder-pill.svg';
   if (path.startsWith('http')) return path;
   return `${API_BASE.replace('/api', '')}${path}`;
 }

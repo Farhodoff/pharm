@@ -1,15 +1,20 @@
-import { useEffect, useState, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Filter, SlidersHorizontal, X, Search as SearchIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import api from '../services/api';
 import MedicineCard from '../components/MedicineCard';
 import { useSearchStore } from '../store/useSearchStore';
+import SearchSuggestions from '../components/SearchSuggestions';
+import { useTranslation } from '../utils/translations';
 
 const ITEMS_PER_PAGE = 12;
 
 export default function Search() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { searchQuery, setSearchQuery } = useSearchStore();
+  const navigate = useNavigate();
+  const { searchQuery, setSearchQuery, setIsSuggestionsOpen, isSuggestionsOpen, addRecentSearch, logSearch } = useSearchStore();
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const { t } = useTranslation();
 
   const [medicines, setMedicines] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
@@ -29,9 +34,23 @@ export default function Search() {
 
   useEffect(() => {
     const q = searchParams.get('q');
-    if (q && q !== searchQuery) setSearchQuery(q);
+    if (q && q !== searchQuery) {
+      setSearchQuery(q);
+      // Log the search
+      logSearch(q);
+    }
     api.get('/categories').then(res => setCategories(res.data));
   }, []);
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      addRecentSearch(searchQuery);
+      logSearch(searchQuery);
+      setIsSuggestionsOpen(false);
+      navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
+    }
+  };
 
   const fetchMedicines = useCallback(async (page = 1) => {
     setLoading(true);
@@ -102,7 +121,7 @@ export default function Search() {
       <div className="flex items-center justify-between">
         <h3 className="font-bold text-slate-800 flex items-center space-x-2">
           <Filter size={18} />
-          <span>Filterlar</span>
+          <span>{t('filters')}</span>
         </h3>
         <button onClick={resetFilters} className="text-xs text-blue-600 hover:underline font-medium">
           Tozalash
@@ -111,7 +130,7 @@ export default function Search() {
 
       {/* Category */}
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-2">Kategoriya</label>
+        <label className="block text-sm font-medium text-slate-700 mb-2">{t('category')}</label>
         <select
           className="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-700"
           value={filters.category}
@@ -126,11 +145,11 @@ export default function Search() {
 
       {/* Price */}
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-2">Narx (so'm)</label>
+        <label className="block text-sm font-medium text-slate-700 mb-2">{t('priceRange')}</label>
         <div className="flex items-center space-x-2">
           <input
             type="number"
-            placeholder="Min"
+            placeholder={t('min')}
             value={filters.minPrice}
             onChange={(e) => handleFilterChange('minPrice', e.target.value)}
             className="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm text-slate-700"
@@ -138,7 +157,7 @@ export default function Search() {
           <span className="text-slate-400">—</span>
           <input
             type="number"
-            placeholder="Max"
+            placeholder={t('max')}
             value={filters.maxPrice}
             onChange={(e) => handleFilterChange('maxPrice', e.target.value)}
             className="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-sm text-slate-700"
@@ -148,7 +167,7 @@ export default function Search() {
 
       {/* Age Limit */}
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-2">Yosh chegarasi</label>
+        <label className="block text-sm font-medium text-slate-700 mb-2">{t('ageLimit')}</label>
         <select
           className="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-slate-700"
           value={filters.ageLimit}
@@ -165,12 +184,12 @@ export default function Search() {
 
       {/* Prescription */}
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-2">Retsept</label>
+        <label className="block text-sm font-medium text-slate-700 mb-2">{t('prescriptionRequired')}</label>
         <div className="space-y-2">
           {[
             { value: '', label: 'Barchasi' },
-            { value: 'false', label: 'Retseptsiz' },
-            { value: 'true', label: 'Retsept bilan' },
+            { value: 'false', label: t('no') },
+            { value: 'true', label: t('yes') },
           ].map(opt => (
             <label key={opt.value} className="flex items-center space-x-2 cursor-pointer">
               <input
@@ -245,13 +264,13 @@ export default function Search() {
 
         {/* Mobile Filter Toggle */}
         <div className="md:hidden mb-4 flex items-center justify-between">
-          <h1 className="text-xl font-bold text-slate-800">Qidiruv natijalari</h1>
+          <h1 className="text-xl font-bold text-slate-800">{t('searchResults')}</h1>
           <button
             onClick={() => setShowMobileFilters(true)}
             className="flex items-center space-x-2 bg-white border border-slate-200 px-4 py-2 rounded-lg text-slate-700"
           >
             <SlidersHorizontal size={18} />
-            <span>Filter</span>
+            <span>{t('filter')}</span>
           </button>
         </div>
 
@@ -265,12 +284,44 @@ export default function Search() {
 
           {/* Main Content */}
           <div className="flex-grow">
+            {/* Search Bar */}
+            <div className="mb-6">
+              <form onSubmit={handleSearchSubmit} className="relative">
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  placeholder={t('searchPlaceholder')}
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setIsSuggestionsOpen(true);
+                  }}
+                  onFocus={() => setIsSuggestionsOpen(true)}
+                  className="w-full pl-12 pr-4 py-3.5 rounded-2xl border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 text-base shadow-sm transition-all"
+                />
+                <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+                {isSuggestionsOpen && (
+                  <SearchSuggestions
+                    inputRef={searchInputRef}
+                    searchQuery={searchQuery}
+                    setSearchQuery={setSearchQuery}
+                    onSearch={(q) => {
+                      addRecentSearch(q);
+                      logSearch(q);
+                      navigate(`/search?q=${encodeURIComponent(q)}`);
+                    }}
+                    showPopular={true}
+                  />
+                )}
+              </form>
+            </div>
+
             <div className="hidden md:flex items-center justify-between mb-6">
               <h1 className="text-2xl font-bold text-slate-800">
-                {searchQuery ? `"${searchQuery}" bo'yicha natijalar` : 'Barcha dorilar'}
+                {searchQuery ? `${t('resultsFor')} "${searchQuery}"` : t('allMedicines')}
               </h1>
               <span className="text-slate-500 bg-white border border-slate-200 px-3 py-1 rounded-full text-sm">
-                {total} ta topildi
+                {total} {t('found')}
               </span>
             </div>
 
@@ -294,13 +345,13 @@ export default function Search() {
                 <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
                   <SearchIcon size={32} />
                 </div>
-                <h2 className="text-xl font-bold text-slate-800 mb-2">Hech narsa topilmadi</h2>
-                <p className="text-slate-500">Boshqa so'z bilan izlab ko'ring yoki filterlarni tozalang.</p>
+                <h2 className="text-xl font-bold text-slate-800 mb-2">{t('noResults')}</h2>
+                <p className="text-slate-500">{t('noResultsDesc')}</p>
                 <button
                   onClick={resetFilters}
                   className="mt-6 bg-blue-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors"
                 >
-                  Filterlarni tozalash
+                  {t('clearFilters')}
                 </button>
               </div>
             )}

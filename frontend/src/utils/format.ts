@@ -1,8 +1,7 @@
 export const formatPrice = (price: number) => {
-  return new Intl.NumberFormat('uz-UZ', {
-    style: 'currency',
-    currency: 'UZS',
+  const formatted = new Intl.NumberFormat('uz-UZ', {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
-  }).format(price).replace('UZS', 'so\'m');
+  }).format(price);
+  return `${formatted} so'm`;
 };
