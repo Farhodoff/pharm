@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Calendar, Eye, User, Share2, Loader2 } from 'lucide-react';
+import { Helmet } from 'react-helmet-async';
 import api from '../services/api';
 import type { Article } from '../types';
 import toast from 'react-hot-toast';
@@ -53,6 +54,14 @@ export default function ArticleDetail() {
 
   return (
     <div className="pt-24 pb-16 bg-slate-50 min-h-screen">
+      <Helmet>
+        <title>{`${article.title} - BIO NEX STAR`}</title>
+        <meta name="description" content={article.excerpt || ''} />
+        <meta property="og:title" content={article.title} />
+        <meta property="og:description" content={article.excerpt || ''} />
+        {article.image && <meta property="og:image" content={article.image} />}
+        <meta property="og:type" content="article" />
+      </Helmet>
       <div className="container mx-auto px-4 max-w-4xl space-y-8">
         <Link to="/blog" className="inline-flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-blue-600 transition-colors">
           <ArrowLeft size={18} />

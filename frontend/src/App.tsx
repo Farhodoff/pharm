@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+import { HelmetProvider } from 'react-helmet-async';
 import MainLayout from './layouts/MainLayout';
 import AdminLayout from './layouts/AdminLayout';
 
@@ -45,41 +46,43 @@ function App() {
   };
 
   return (
-    <LanguageContext.Provider value={{ lang, setLang, t }}>
-      <Toaster position="top-right" />
-      <Router>
-        <Routes>
-          {/* Public Routes */}
-          <Route path="/" element={<MainLayout />}>
-            <Route index element={<Home />} />
-            <Route path="search" element={<Search />} />
-            <Route path="medicine/:id" element={<MedicineDetail />} />
-            <Route path="blog" element={<Blog />} />
-            <Route path="blog/:slug" element={<ArticleDetail />} />
-            <Route path="b2b" element={<B2BPortal />} />
-          </Route>
+    <HelmetProvider>
+      <LanguageContext.Provider value={{ lang, setLang, t }}>
+        <Toaster position="top-right" />
+        <Router>
+          <Routes>
+            {/* Public Routes */}
+            <Route path="/" element={<MainLayout />}>
+              <Route index element={<Home />} />
+              <Route path="search" element={<Search />} />
+              <Route path="medicine/:id" element={<MedicineDetail />} />
+              <Route path="blog" element={<Blog />} />
+              <Route path="blog/:slug" element={<ArticleDetail />} />
+              <Route path="b2b" element={<B2BPortal />} />
+            </Route>
 
-          {/* Admin Login (no layout) */}
-          <Route path="/admin/login" element={<AdminLogin />} />
+            {/* Admin Login (no layout) */}
+            <Route path="/admin/login" element={<AdminLogin />} />
 
-          {/* Admin Routes with Layout */}
-          <Route path="/admin" element={<AdminLayout />}>
-            <Route index element={<AdminDashboard />} />
-            <Route path="medicines" element={<AdminMedicines />} />
-            <Route path="categories" element={<AdminCategories />} />
-            <Route path="manufacturers" element={<AdminManufacturers />} />
-            <Route path="inventory" element={<AdminInventory />} />
-            <Route path="orders" element={<AdminOrders />} />
-            <Route path="articles" element={<AdminArticles />} />
-            <Route path="audit-logs" element={<AdminAuditLogs />} />
-            <Route path="users" element={<AdminUsers />} />
-            <Route path="settings" element={<AdminSettings />} />
-          </Route>
+            {/* Admin Routes with Layout */}
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<AdminDashboard />} />
+              <Route path="medicines" element={<AdminMedicines />} />
+              <Route path="categories" element={<AdminCategories />} />
+              <Route path="manufacturers" element={<AdminManufacturers />} />
+              <Route path="inventory" element={<AdminInventory />} />
+              <Route path="orders" element={<AdminOrders />} />
+              <Route path="articles" element={<AdminArticles />} />
+              <Route path="audit-logs" element={<AdminAuditLogs />} />
+              <Route path="users" element={<AdminUsers />} />
+              <Route path="settings" element={<AdminSettings />} />
+            </Route>
 
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </Router>
-    </LanguageContext.Provider>
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Router>
+      </LanguageContext.Provider>
+    </HelmetProvider>
   );
 }
 

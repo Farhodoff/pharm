@@ -35,7 +35,7 @@ export const getMedicines = async (req: Request, res: Response) => {
     const [medicines, total] = await Promise.all([
       prisma.medicine.findMany({
         where: filter,
-        include: { category: true, manufacturer: true, images: true },
+        include: { category: true, manufacturer: true, images: true, reviews: { select: { rating: true } } },
         orderBy: { createdAt: 'desc' },
         skip,
         take: limitNum ?? undefined,
@@ -43,8 +43,19 @@ export const getMedicines = async (req: Request, res: Response) => {
       prisma.medicine.count({ where: filter }),
     ]);
 
+    const medicinesWithRating = medicines.map((m) => {
+      const totalRating = m.reviews.reduce((acc, curr) => acc + curr.rating, 0);
+      const averageRating = m.reviews.length > 0 ? Number((totalRating / m.reviews.length).toFixed(1)) : 0;
+      return {
+        ...m,
+        reviewsCount: m.reviews.length,
+        averageRating,
+        reviews: undefined
+      };
+    });
+
     res.json({
-      data: medicines,
+      data: medicinesWithRating,
       total,
       page: pageNum ?? 1,
       totalPages: limitNum ? Math.ceil(total / limitNum) : 1,
@@ -69,6 +80,9 @@ export const getMedicineById = async (req: Request, res: Response) => {
         contraindications: true,
         storage: true,
         images: true,
+        reviews: {
+          orderBy: { createdAt: 'desc' }
+        }
       },
     });
 
@@ -77,7 +91,14 @@ export const getMedicineById = async (req: Request, res: Response) => {
       return;
     }
 
-    res.json(medicine);
+    const totalRating = medicine.reviews.reduce((acc, curr) => acc + curr.rating, 0);
+    const averageRating = medicine.reviews.length > 0 ? Number((totalRating / medicine.reviews.length).toFixed(1)) : 0;
+
+    res.json({
+      ...medicine,
+      averageRating,
+      reviewsCount: medicine.reviews.length,
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Error fetching medicine' });
@@ -524,3 +545,53 @@ export const logSearch = async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Error logging search' });
   }
 };
+
+export const createMedicineReview = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const { userName, rating, comment } = req.body;
+
+  if (!userName || !rating) {
+    res.status(400).json({ message: 'Ism va baho kiritilishi shart' });
+    return;
+  }
+
+  try {
+    const medicine = await prisma.medicine.findUnique({
+      where: { id: Number(id) }
+    });
+
+    if (!medicine) {
+      res.status(404).json({ message: 'Dori topilmadi' });
+      return;
+    }
+
+    const review = await prisma.review.create({
+      data: {
+        medicineId: Number(id),
+        userName: String(userName),
+        rating: Math.min(5, Math.max(1, Number(rating))),
+        comment: comment ? String(comment) : null,
+      }
+    });
+
+    res.status(201).json(review);
+  } catch (error) {
+    console.error('Create review error:', error);
+    res.status(500).json({ message: 'Error creating review' });
+  }
+};
+
+export const getMedicineReviews = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  try {
+    const reviews = await prisma.review.findMany({
+      where: { medicineId: Number(id) },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json(reviews);
+  } catch (error) {
+    console.error('Get reviews error:', error);
+    res.status(500).json({ message: 'Error fetching reviews' });
+  }
+};
+

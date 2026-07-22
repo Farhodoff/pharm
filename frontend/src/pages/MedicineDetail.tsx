@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Building2, AlertCircle, ShieldAlert, Tag, Package, Box, Expand } from 'lucide-react';
+import { Helmet } from 'react-helmet-async';
+import toast from 'react-hot-toast';
 import api from '../services/api';
 import { formatPrice } from '../utils/format';
 import type { Medicine } from '../types';
@@ -19,6 +21,9 @@ export default function MedicineDetail() {
   const [activeTab, setActiveTab] = useState('tavsif');
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [reviewForm, setReviewForm] = useState({ userName: '', rating: 5, comment: '' });
+  const [submittingReview, setSubmittingReview] = useState(false);
 
   const openLightbox = useCallback((index: number) => {
     setSelectedImageIndex(index);
@@ -49,6 +54,7 @@ export default function MedicineDetail() {
           api.get(`/medicines/${id}/analogs`),
         ]);
         setMedicine(res.data);
+        setReviews(res.data.reviews || []);
         setAnalogs(analogRes.data.data || []);
       } catch (error) {
         console.error('Error fetching medicine details', error);
@@ -58,6 +64,34 @@ export default function MedicineDetail() {
     };
     fetchMedicine();
   }, [id]);
+
+  const handleReviewSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmittingReview(true);
+    try {
+      const res = await api.post(`/medicines/${id}/reviews`, reviewForm);
+      toast.success(t('reviewSuccess'));
+      setReviews([res.data, ...reviews]);
+      setReviewForm({ userName: '', rating: 5, comment: '' });
+      
+      // Update rating counts in local state
+      if (medicine) {
+        const newCount = ((medicine as any).reviewsCount || 0) + 1;
+        const currentAvg = (medicine as any).averageRating || 0;
+        const currentCount = (medicine as any).reviewsCount || 0;
+        const newRating = Number((((currentAvg * currentCount) + reviewForm.rating) / newCount).toFixed(1));
+        setMedicine({
+          ...medicine,
+          reviewsCount: newCount,
+          averageRating: newRating,
+        } as any);
+      }
+    } catch {
+      toast.error(t('reviewError'));
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
 
   if (loading) {
     return <div className="pt-24 pb-16 min-h-screen flex items-center justify-center">{t('loading')}</div>;
@@ -76,10 +110,19 @@ export default function MedicineDetail() {
     { id: 'qarshi', label: t('tabContraindications') },
     { id: 'yon', label: t('tabSideEffects') },
     { id: 'saqlash', label: t('tabStorage') },
+    { id: 'sharhlar', label: `${t('tabReviews')} (${(medicine as any).reviewsCount || 0})` },
   ];
 
   return (
     <div className="pt-24 pb-16 bg-slate-50 min-h-screen dark:bg-slate-900 transition-colors duration-300">
+      <Helmet>
+        <title>{`${medicine.name} - BIO NEX STAR`}</title>
+        <meta name="description" content={medicine.description || ''} />
+        <meta property="og:title" content={`${medicine.name} - ${medicine.internationalName}`} />
+        <meta property="og:description" content={medicine.description || ''} />
+        <meta property="og:image" content={getImageUrl(images[0]?.url)} />
+        <meta property="og:type" content="website" />
+      </Helmet>
       <div className="container mx-auto px-4">
         
         <button onClick={() => navigate(-1)} className="inline-flex items-center space-x-2 text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 mb-6 transition-colors">
@@ -159,7 +202,18 @@ export default function MedicineDetail() {
                 )}
               </div>
 
-              <h1 className="text-3xl md:text-5xl font-bold text-slate-800 mb-2">{medicine.name}</h1>
+              <h1 className="text-3xl md:text-5xl font-bold text-slate-800 dark:text-white mb-2">{medicine.name}</h1>
+              
+              <div className="flex items-center gap-1.5 mb-4">
+                <div className="flex text-amber-400">
+                  {[...Array(5)].map((_, i) => (
+                    <svg key={i} className={`w-5 h-5 ${i < Math.round((medicine as any).averageRating || 0) ? 'fill-current' : 'text-slate-300'}`} viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                  ))}
+                </div>
+                <span className="text-sm font-bold text-slate-700 dark:text-slate-200">{(medicine as any).averageRating || '0.0'}</span>
+                <span className="text-xs text-slate-400">({(medicine as any).reviewsCount || 0} {t('reviewsCount')})</span>
+              </div>
+
               <p className="text-lg text-slate-500 mb-6">{medicine.internationalName}</p>
 
               <div className="bg-slate-50 p-4 rounded-2xl mb-8 flex items-center space-x-4 border border-slate-100">
@@ -336,6 +390,86 @@ export default function MedicineDetail() {
                 <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 text-center">
                   <span className="block text-sm text-slate-400 mb-2">{t('shelfLife')}</span>
                   <span className="font-bold text-blue-600">{medicine.storage?.shelfLife || "-"}</span>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'sharhlar' && (
+              <div className="space-y-8">
+                {/* Write Review Form */}
+                <div className="bg-slate-50 dark:bg-slate-700/30 p-6 rounded-2xl border border-slate-200/60 dark:border-slate-700/60">
+                  <h4 className="text-lg font-bold text-slate-800 dark:text-white mb-4">{t('writeReview')}</h4>
+                  <form onSubmit={handleReviewSubmit} className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-600 dark:text-slate-400 mb-1">{t('yourName')}</label>
+                        <input
+                          type="text"
+                          required
+                          value={reviewForm.userName}
+                          onChange={(e) => setReviewForm({ ...reviewForm, userName: e.target.value })}
+                          className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-sm dark:text-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-600 dark:text-slate-400 mb-1">{t('rating')}</label>
+                        <div className="flex items-center gap-1.5 h-[42px]">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <button
+                              key={star}
+                              type="button"
+                              onClick={() => setReviewForm({ ...reviewForm, rating: star })}
+                              className="text-amber-400 focus:outline-none hover:scale-110 transition-transform"
+                            >
+                              <svg className={`w-7 h-7 ${star <= reviewForm.rating ? 'fill-current' : 'text-slate-300'}`} viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-600 dark:text-slate-400 mb-1">{t('yourComment')}</label>
+                      <textarea
+                        required
+                        rows={3}
+                        value={reviewForm.comment}
+                        onChange={(e) => setReviewForm({ ...reviewForm, comment: e.target.value })}
+                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-sm dark:text-white"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={submittingReview}
+                      className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 py-2.5 rounded-xl transition-all shadow-md shadow-blue-500/20 disabled:opacity-60 text-sm cursor-pointer"
+                    >
+                      {submittingReview ? t('loading') : t('submitReview')}
+                    </button>
+                  </form>
+                </div>
+
+                {/* Reviews List */}
+                <div className="space-y-4">
+                  <h4 className="text-lg font-bold text-slate-800 dark:text-white">{t('reviewsTitle')}</h4>
+                  {reviews.length === 0 ? (
+                    <p className="text-slate-500 dark:text-slate-400 text-sm italic">{t('noReviews')}</p>
+                  ) : (
+                    <div className="space-y-4">
+                      {reviews.map((rev: any) => (
+                        <div key={rev.id} className="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-slate-800 dark:text-white text-sm">{rev.userName}</span>
+                            <span className="text-xs text-slate-400">{new Date(rev.createdAt).toLocaleDateString()}</span>
+                          </div>
+                          <div className="flex text-amber-400">
+                            {[...Array(5)].map((_, i) => (
+                              <svg key={i} className={`w-4 h-4 ${i < rev.rating ? 'fill-current' : 'text-slate-200'}`} viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" /></svg>
+                            ))}
+                          </div>
+                          <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">{rev.comment}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             )}

@@ -13,6 +13,7 @@ import auditRoutes from './routes/auditRoutes';
 import articleRoutes from './routes/articleRoutes';
 import importExportRoutes from './routes/importExportRoutes';
 import ocrRoutes from './routes/ocrRoutes';
+import seoRoutes from './routes/seoRoutes';
 
 const app = express();
 
@@ -32,6 +33,7 @@ app.use('/api/audit-logs', auditRoutes);
 app.use('/api/articles', articleRoutes);
 app.use('/api/import-export', importExportRoutes);
 app.use('/api/ocr', ocrRoutes);
+app.use('/', seoRoutes);
 
 app.get('/', (req, res) => {
   res.send('Pharmacy API is running...');

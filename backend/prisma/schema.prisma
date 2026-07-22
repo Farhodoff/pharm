@@ -59,6 +59,7 @@ model Medicine {
   storage              MedicineStorage?
   images               MedicineImage[]
   orderItems           OrderItem[]
+  reviews              Review[]
   
   createdAt            DateTime                  @default(now())
   updatedAt            DateTime                  @updatedAt
@@ -181,3 +182,14 @@ model Article {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
+
+model Review {
+  id         Int      @id @default(autoincrement())
+  medicineId Int
+  medicine   Medicine @relation(fields: [medicineId], references: [id], onDelete: Cascade)
+  userName   String
+  rating     Int
+  comment    String?
+  createdAt  DateTime @default(now())
+}
+
